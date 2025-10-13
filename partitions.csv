@@ -1,0 +1,11 @@
+# @file partitions.csv
+# @brief Partition table for ESP32 flash memory
+#
+# Defines flash layout including LittleFS partition for web files.
+
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     0x9000,  0x4000,
+otadata,  data, ota,     0xd000,  0x2000,
+phy_init, data, phy,     0xf000,  0x1000,
+factory,  app,  factory, 0x10000, 1M,
+littlefs, data, spiffs,  ,        1M,

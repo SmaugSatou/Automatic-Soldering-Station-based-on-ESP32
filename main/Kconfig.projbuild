@@ -1,0 +1,277 @@
+# @file Kconfig.projbuild
+# @brief Project configuration options
+#
+# Defines configurable parameters for hardware pins, motor settings,
+# WiFi credentials, and operational limits.
+
+menu "Automatic Soldering Station Configuration"
+
+    menu "WiFi Configuration"
+        config WIFI_SSID
+            string "WiFi SSID"
+            default "SolderingStation"
+            help
+                SSID for the WiFi Access Point
+
+        config WIFI_PASSWORD
+            string "WiFi Password"
+            default "soldering123"
+            help
+                Password for WiFi AP (min 8 characters)
+
+        config WIFI_CHANNEL
+            int "WiFi Channel"
+            default 1
+            range 1 13
+            help
+                WiFi channel for AP
+
+        config WIFI_MAX_CONNECTIONS
+            int "Maximum WiFi Connections"
+            default 4
+            range 1 4
+            help
+                Maximum number of simultaneous client connections
+    endmenu
+
+    menu "Stepper Motor Pins - X Axis"
+        config MOTOR_X_STEP_PIN
+            int "X-Axis Step Pin"
+            default 25
+            help
+                GPIO pin for X-axis stepper STEP signal
+
+        config MOTOR_X_DIR_PIN
+            int "X-Axis Direction Pin"
+            default 26
+            help
+                GPIO pin for X-axis stepper DIR signal
+
+        config MOTOR_X_ENABLE_PIN
+            int "X-Axis Enable Pin"
+            default 27
+            help
+                GPIO pin for X-axis stepper ENABLE signal
+    endmenu
+
+    menu "Stepper Motor Pins - Y Axis"
+        config MOTOR_Y_STEP_PIN
+            int "Y-Axis Step Pin"
+            default 14
+            help
+                GPIO pin for Y-axis stepper STEP signal
+
+        config MOTOR_Y_DIR_PIN
+            int "Y-Axis Direction Pin"
+            default 12
+            help
+                GPIO pin for Y-axis stepper DIR signal
+
+        config MOTOR_Y_ENABLE_PIN
+            int "Y-Axis Enable Pin"
+            default 13
+            help
+                GPIO pin for Y-axis stepper ENABLE signal
+    endmenu
+
+    menu "Stepper Motor Pins - Z Axis"
+        config MOTOR_Z_STEP_PIN
+            int "Z-Axis Step Pin"
+            default 33
+            help
+                GPIO pin for Z-axis stepper STEP signal
+
+        config MOTOR_Z_DIR_PIN
+            int "Z-Axis Direction Pin"
+            default 32
+            help
+                GPIO pin for Z-axis stepper DIR signal
+
+        config MOTOR_Z_ENABLE_PIN
+            int "Z-Axis Enable Pin"
+            default 15
+            help
+                GPIO pin for Z-axis stepper ENABLE signal
+    endmenu
+
+    menu "Stepper Motor Pins - Solder Supply"
+        config MOTOR_S_STEP_PIN
+            int "Solder Supply Step Pin"
+            default 18
+            help
+                GPIO pin for solder supply stepper STEP signal
+
+        config MOTOR_S_DIR_PIN
+            int "Solder Supply Direction Pin"
+            default 19
+            help
+                GPIO pin for solder supply stepper DIR signal
+
+        config MOTOR_S_ENABLE_PIN
+            int "Solder Supply Enable Pin"
+            default 21
+            help
+                GPIO pin for solder supply stepper ENABLE signal
+    endmenu
+
+    menu "DRV8825 Mode Pins"
+        config DRV8825_MODE0_PIN
+            int "DRV8825 MODE0 Pin"
+            default 16
+            help
+                GPIO pin for DRV8825 MODE0 (M0)
+
+        config DRV8825_MODE1_PIN
+            int "DRV8825 MODE1 Pin"
+            default 17
+            help
+                GPIO pin for DRV8825 MODE1 (M1)
+
+        config DRV8825_MODE2_PIN
+            int "DRV8825 MODE2 Pin"
+            default 5
+            help
+                GPIO pin for DRV8825 MODE2 (M2)
+    endmenu
+
+    menu "Soldering Iron Configuration"
+        config SOLDERING_IRON_PWM_PIN
+            int "Soldering Iron PWM Pin"
+            default 22
+            help
+                GPIO pin for PWM control of heating element (connected to MOSFET gate)
+
+        config SOLDERING_IRON_PWM_FREQUENCY
+            int "PWM Frequency (Hz)"
+            default 1000
+            help
+                PWM frequency for heater control
+
+        config SOLDERING_IRON_MAX_TEMP
+            int "Maximum Temperature (°C)"
+            default 450
+            help
+                Maximum allowed temperature for safety
+
+        config SOLDERING_IRON_DEFAULT_TEMP
+            int "Default Temperature (°C)"
+            default 350
+            help
+                Default soldering temperature
+    endmenu
+
+    menu "Temperature Sensor Configuration"
+        config TEMP_SENSOR_ADC_CHANNEL
+            int "ADC Channel"
+            default 0
+            range 0 7
+            help
+                ADC1 channel for temperature reading (AD8495 output)
+
+        config TEMP_SENSOR_SAMPLES
+            int "Number of Samples"
+            default 10
+            help
+                Number of ADC samples to average for temperature reading
+    endmenu
+
+    menu "Motion Control Parameters"
+        config MAX_VELOCITY_X
+            int "Max X Velocity (mm/s)"
+            default 100
+            help
+                Maximum velocity for X-axis movement
+
+        config MAX_VELOCITY_Y
+            int "Max Y Velocity (mm/s)"
+            default 100
+            help
+                Maximum velocity for Y-axis movement
+
+        config MAX_VELOCITY_Z
+            int "Max Z Velocity (mm/s)"
+            default 50
+            help
+                Maximum velocity for Z-axis movement
+
+        config WORK_AREA_X
+            int "Work Area X Size (mm)"
+            default 200
+            help
+                Maximum X-axis travel distance
+
+        config WORK_AREA_Y
+            int "Work Area Y Size (mm)"
+            default 200
+            help
+                Maximum Y-axis travel distance
+
+        config WORK_AREA_Z
+            int "Work Area Z Size (mm)"
+            default 100
+            help
+                Maximum Z-axis travel distance
+
+        config STEPS_PER_MM_X
+            int "Steps per mm - X Axis"
+            default 80
+            help
+                Stepper motor steps per millimeter for X-axis
+
+        config STEPS_PER_MM_Y
+            int "Steps per mm - Y Axis"
+            default 80
+            help
+                Stepper motor steps per millimeter for Y-axis
+
+        config STEPS_PER_MM_Z
+            int "Steps per mm - Z Axis"
+            default 400
+            help
+                Stepper motor steps per millimeter for Z-axis
+    endmenu
+
+    menu "Display Configuration (Optional)"
+        config ENABLE_OLED_DISPLAY
+            bool "Enable OLED Display"
+            default n
+            help
+                Enable optional OLED display for status information
+
+        config DISPLAY_I2C_ADDRESS
+            hex "Display I2C Address"
+            default 0x3C
+            depends on ENABLE_OLED_DISPLAY
+            help
+                I2C address of OLED display
+
+        config DISPLAY_SDA_PIN
+            int "Display SDA Pin"
+            default 23
+            depends on ENABLE_OLED_DISPLAY
+            help
+                GPIO pin for I2C SDA
+
+        config DISPLAY_SCL_PIN
+            int "Display SCL Pin"
+            default 22
+            depends on ENABLE_OLED_DISPLAY
+            help
+                GPIO pin for I2C SCL
+    endmenu
+
+    menu "Web Server Configuration"
+        config WEB_SERVER_PORT
+            int "HTTP Server Port"
+            default 80
+            help
+                Port for HTTP web server
+
+        config WEB_SERVER_MAX_HANDLERS
+            int "Maximum URI Handlers"
+            default 20
+            help
+                Maximum number of URI handlers for web server
+    endmenu
+
+endmenu

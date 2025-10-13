@@ -1,3 +1,14 @@
+"""
+@file drill_to_gcode.py
+@brief PCB drill file to G-Code converter
+
+Converts NC drill (.DRL) files to custom G-Code dialect for soldering station.
+Parses drill coordinates and generates movement commands.
+
+Usage:
+    python drill_to_gcode.py input.drl output.gcode
+"""
+
 import re
 from collections import defaultdict
 

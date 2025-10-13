@@ -5,3 +5,7 @@
  * Object-oriented interface to soldering iron HAL.
  */
 
+#include "SolderingIron.hpp"
+
+// Implementation of SolderingIron class methods
+

@@ -1,7 +1,5 @@
-/**
- * @file CMakeLists.txt
- * @brief Build configuration for temperature sensor component
- */
+# CMakeLists.txt
+# Build configuration for temperature sensor component
 
 idf_component_register(
     SRCS "temperature_sensor_hal.c"

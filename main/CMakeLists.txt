@@ -1,7 +1,5 @@
-/**
- * @file CMakeLists.txt
- * @brief Build configuration for main application
- */
+# CMakeLists.txt
+# Build configuration for main application
 
 idf_component_register(
     SRCS "main.cpp"

@@ -5,3 +5,11 @@
  * PWM-based temperature control for soldering iron heating element.
  */
 
+#include "soldering_iron_hal.h"
+
+/**
+ * @brief Internal structure for soldering iron handle
+ */
+struct soldering_iron_handle_s {
+    
+};

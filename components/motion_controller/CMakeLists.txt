@@ -1,7 +1,5 @@
-/**
- * @file CMakeLists.txt
- * @brief Build configuration for motion controller component
- */
+# CMakeLists.txt
+# Build configuration for motion controller component
 
 idf_component_register(
     SRCS "motion_controller.cpp"

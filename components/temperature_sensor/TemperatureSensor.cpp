@@ -5,3 +5,7 @@
  * Object-oriented interface to temperature sensor HAL.
  */
 
+#include "TemperatureSensor.hpp"
+
+// Implementation of TemperatureSensor class methods
+

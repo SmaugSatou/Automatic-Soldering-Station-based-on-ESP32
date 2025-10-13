@@ -1,7 +1,5 @@
-/**
- * @file CMakeLists.txt
- * @brief Build configuration for filesystem component
- */
+# CMakeLists.txt
+# Build configuration for filesystem component
 
 idf_component_register(
     SRCS "filesystem.c"

@@ -1,7 +1,5 @@
-/**
- * @file CMakeLists.txt
- * @brief Build configuration for display component
- */
+# CMakeLists.txt
+# Build configuration for display component
 
 idf_component_register(
     SRCS "display.c"

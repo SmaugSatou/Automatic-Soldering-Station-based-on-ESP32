@@ -5,3 +5,7 @@
  * Provides object-oriented interface to stepper motor HAL.
  */
 
+#include "StepperMotor.hpp"
+
+// Implementation of StepperMotor class methods
+

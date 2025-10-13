@@ -1,7 +1,5 @@
-/**
- * @file CMakeLists.txt
- * @brief Build configuration for soldering iron component
- */
+# CMakeLists.txt
+# Build configuration for soldering iron component
 
 idf_component_register(
     SRCS "soldering_iron_hal.c"

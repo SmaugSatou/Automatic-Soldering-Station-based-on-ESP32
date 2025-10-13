@@ -1,7 +1,5 @@
-/**
- * @file CMakeLists.txt
- * @brief Build configuration for stepper motor component
- */
+# CMakeLists.txt
+# Build configuration for stepper motor component
 
 idf_component_register(
     SRCS "stepper_motor_hal.c"

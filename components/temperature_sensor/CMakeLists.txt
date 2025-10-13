@@ -5,5 +5,5 @@ idf_component_register(
     SRCS "temperature_sensor_hal.c"
          "TemperatureSensor.cpp"
     INCLUDE_DIRS "include"
-    REQUIRES driver
+    REQUIRES esp_adc
 )

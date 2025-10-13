@@ -5,5 +5,5 @@ idf_component_register(
     SRCS "stepper_motor_hal.c"
          "StepperMotor.cpp"
     INCLUDE_DIRS "include"
-    REQUIRES driver
+    REQUIRES esp_driver_gpio
 )

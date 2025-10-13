@@ -10,8 +10,9 @@
 #define TEMPERATURE_SENSOR_HAL_H
 
 #include <stdint.h>
-#include "driver/adc.h"
-#include "esp_adc_cal.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,8 +22,8 @@ extern "C" {
  * @brief Temperature sensor configuration
  */
 typedef struct {
-    adc1_channel_t adc_channel;
-    adc_bits_width_t adc_width;
+    adc_channel_t adc_channel;
+    adc_bitwidth_t adc_bitwidth;
     adc_atten_t adc_attenuation;
     uint32_t samples_count;
     double voltage_offset;

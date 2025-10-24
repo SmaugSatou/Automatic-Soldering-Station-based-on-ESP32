@@ -17,21 +17,31 @@
  * @brief C++ wrapper class for stepper motor control
  */
 class StepperMotor {
+private:
+    // @brief Current position in steps/256
+    int32_t position_;
+    stepper_motor_handle_t handle_;
+    int32_t target_position_;
+    int32_t steps_per_mm;
+
 public:
     /**
      * @brief Constructor
      * @param config Motor configuration parameters
+     * @param steps_per_mm Steps per millimeter for this motor
      */
-    explicit StepperMotor(const stepper_motor_config_t& config);
+    explicit StepperMotor(const stepper_motor_config_t& config, uint32_t steps_per_mm);
     
     /**
      * @brief Destructor
      */
     ~StepperMotor();
     
+    // Delete copy constructor and assignment
     StepperMotor(const StepperMotor&) = delete;
     StepperMotor& operator=(const StepperMotor&) = delete;
     
+    // Move constructor and assignment
     StepperMotor(StepperMotor&& other) noexcept;
     StepperMotor& operator=(StepperMotor&& other) noexcept;
     
@@ -59,14 +69,29 @@ public:
      * @brief Execute multiple steps
      */
     void stepMultiple(uint32_t steps);
-    
+
+    /**
+     * @brief Set target position in steps/256
+     */
+    void setTargetPosition(int32_t position);
+
+    /**
+     * @brief Execute single step towards target position
+     */
+    void stepToTarget();
+
+    /**
+     * @brief Execute multiple steps towards target position
+     */
+    void stepMultipleToTarget(uint32_t steps);
+
     /**
      * @brief Get current position
      */
     int32_t getPosition() const;
     
     /**
-     * @brief Reset position counter
+     * @brief Reset position counter(set current position to 0)
      */
     void resetPosition();
     
@@ -75,8 +100,15 @@ public:
      */
     bool isInitialized() const { return handle_ != nullptr; }
 
-private:
-    stepper_motor_handle_t handle_;
+    /**
+     * @brief Convert millimeters to steps/256 for current motor configuration
+     */
+    int32_t mm_to_steps_256(int64_t mm);
+
+    /**
+     * @brief Convert steps/256 to millimeters for current motor configuration
+     */
+    int32_t steps_256_to_mm(int32_t steps);
 };
 
 #endif // STEPPER_MOTOR_HPP

@@ -22,10 +22,8 @@ extern "C" {
  * @brief Microstepping mode configuration
  */
 typedef enum {
-    STEPPER_MICROSTEP_FULL = 0,
-    STEPPER_MICROSTEP_1_2,
     STEPPER_MICROSTEP_1_4,
-    STEPPER_MICROSTEP_1_8,
+    STEPPER_MICROSTEP_1_8, 
     STEPPER_MICROSTEP_1_16,
     STEPPER_MICROSTEP_1_32
 } stepper_microstep_mode_t;
@@ -34,12 +32,21 @@ typedef enum {
  * @brief Motor rotation direction
  */
 typedef enum {
-    STEPPER_DIR_FORWARD = 0,
-    STEPPER_DIR_BACKWARD
+    STEPPER_DIR_CLOCKWISE = 0,
+    STEPPER_DIR_COUNTERCLOCKWISE = 1,
 } stepper_direction_t;
 
 /**
+ * @brief Motor enable/disable state
+ */
+typedef enum {
+    STEPPER_ENABLE = 0,
+    STEPPER_DISABLE = 1,
+} stepper_enable_t;
+
+/**
  * @brief Stepper motor configuration structure
+ * Represent general state of motor
  */
 typedef struct {
     gpio_num_t step_pin;
@@ -47,23 +54,44 @@ typedef struct {
     gpio_num_t enable_pin;
     gpio_num_t mode0_pin;
     gpio_num_t mode1_pin;
-    gpio_num_t mode2_pin;
-    stepper_microstep_mode_t microstep_mode;
-    uint32_t steps_per_revolution;
 } stepper_motor_config_t;
 
 /**
  * @brief Stepper motor handle
+ * Represent specific motor instance current state
  */
 typedef struct stepper_motor_handle_s* stepper_motor_handle_t;
 
 /**
  * @brief Initialize stepper motor driver
+ * 
+ * @param config Pointer to motor configuration structure
+ * 
+ * @return stepper_motor_handle_t Handle to the initialized motor instance, or NULL on failure
+ * @note After initialization:
+ * 
+ * - Motor is disabled.
+ *
+ * - Direction is set to clockwise.
+ *
+ * - Microstepping mode is set to full step.
+ * 
+ * - Position counter is set to zero.
  */
 stepper_motor_handle_t stepper_motor_hal_init(const stepper_motor_config_t* config);
 
 /**
  * @brief Deinitialize stepper motor driver
+ * 
+ * @param handle Handle to the motor instance
+ * 
+ * @note After deinitialization:
+ * 
+ * - Motor is disabled.
+ * 
+ * - GPIO pins configuration remain unchanged.
+ * 
+ * - Memory allocated for the handle is freed.
  */
 void stepper_motor_hal_deinit(stepper_motor_handle_t handle);
 
@@ -93,14 +121,22 @@ void stepper_motor_hal_step(stepper_motor_handle_t handle);
 void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t steps);
 
 /**
- * @brief Get current position in steps
+ * @brief Set time between steps in microseconds
+ * 
+ * @param handle Handle to the motor instance
+ * @param step_time_us Time between steps in microseconds (minimum 100us)
+ * 
+ * @note This affects the speed when using stepper_motor_hal_step_multiple()
  */
-int32_t stepper_motor_hal_get_position(stepper_motor_handle_t handle);
+void stepper_motor_hal_set_step_time(stepper_motor_handle_t handle, uint32_t step_time_us);
 
 /**
- * @brief Reset position counter to zero
+ * @brief Get current step time in microseconds
+ * 
+ * @param handle Handle to the motor instance
+ * @return uint32_t Current step time in microseconds, or 0 on error
  */
-void stepper_motor_hal_reset_position(stepper_motor_handle_t handle);
+uint32_t stepper_motor_hal_get_step_time(stepper_motor_handle_t handle);
 
 #ifdef __cplusplus
 }

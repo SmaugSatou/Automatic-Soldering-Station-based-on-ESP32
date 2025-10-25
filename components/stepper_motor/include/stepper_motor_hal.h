@@ -1,9 +1,10 @@
 /**
  * @file stepper_motor_hal.h
- * @brief Hardware Abstraction Layer for DRV8825 stepper motor driver
+ * @brief Hardware Abstraction Layer for TMC2208 stepper motor driver
  * 
- * Provides low-level C interface for controlling stepper motors via DRV8825 driver.
- * Supports microstepping modes (1/2, 1/4, 1/8, 1/16, 1/32) for precision control.
+ * Provides low-level C interface for controlling stepper motors via TMC2208 driver.
+ * Supports microstepping modes (1/4, 1/8, 1/16) via MS pins for precision control.
+ * Note: 1/32 microstepping requires UART configuration (not supported via pins).
  * Used for X, Y, Z, and solder supply (S) axis control.
  */
 
@@ -137,6 +138,22 @@ void stepper_motor_hal_set_step_time(stepper_motor_handle_t handle, uint32_t ste
  * @return uint32_t Current step time in microseconds, or 0 on error
  */
 uint32_t stepper_motor_hal_get_step_time(stepper_motor_handle_t handle);
+
+/**
+ * @brief Get current motor direction
+ * 
+ * @param handle Handle to the motor instance
+ * @return stepper_direction_t Current direction
+ */
+stepper_direction_t stepper_motor_hal_get_direction(stepper_motor_handle_t handle);
+
+/**
+ * @brief Get current microstepping mode
+ * 
+ * @param handle Handle to the motor instance
+ * @return stepper_microstep_mode_t Current microstepping mode
+ */
+stepper_microstep_mode_t stepper_motor_hal_get_microstep_mode(stepper_motor_handle_t handle);
 
 #ifdef __cplusplus
 }

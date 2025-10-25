@@ -20,9 +20,11 @@ StepperMotor::StepperMotor(const stepper_motor_config_t& config, uint32_t steps_
 {
     if (handle_ == nullptr) {
         ESP_LOGE(TAG, "Failed to initialize stepper motor");
-        throw std::runtime_error("Failed to initialize stepper motor");
+        // Cannot throw in ESP-IDF (exceptions disabled)
+        // User should check isInitialized() after construction
+    } else {
+        ESP_LOGI(TAG, "StepperMotor initialized with %lu steps/mm", steps_per_mm);
     }
-    ESP_LOGI(TAG, "StepperMotor initialized with %lu steps/mm", steps_per_mm);
 }
 
 // Destructor
@@ -97,8 +99,38 @@ void StepperMotor::step() {
         return;
     }
     stepper_motor_hal_step(handle_);
-    // Update internal position tracking
-    // Note: HAL already tracks position, but we keep a copy for convenience
+    
+    // Update internal position tracking in 1/256 steps units
+    // Position delta depends on current microstepping mode:
+    // STEPPER_MICROSTEP_1_4  -> 1 step = 64/256 (full step / 4)
+    // STEPPER_MICROSTEP_1_8  -> 1 step = 32/256 (full step / 8)
+    // STEPPER_MICROSTEP_1_16 -> 1 step = 16/256 (full step / 16)
+    // STEPPER_MICROSTEP_1_32 -> 1 step = 8/256  (full step / 32)
+    
+    int32_t position_delta = 0;
+    stepper_microstep_mode_t mode = stepper_motor_hal_get_microstep_mode(handle_);
+    
+    switch (mode) {
+        case STEPPER_MICROSTEP_1_4:
+            position_delta = 64;
+            break;
+        case STEPPER_MICROSTEP_1_8:
+            position_delta = 32;
+            break;
+        case STEPPER_MICROSTEP_1_16:
+            position_delta = 16;
+            break;
+        case STEPPER_MICROSTEP_1_32:
+            position_delta = 8;
+            break;
+    }
+    
+    // Apply direction
+    if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
+        position_ += position_delta;
+    } else {
+        position_ -= position_delta;
+    }
 }
 
 void StepperMotor::stepMultiple(uint32_t steps) {
@@ -107,6 +139,32 @@ void StepperMotor::stepMultiple(uint32_t steps) {
         return;
     }
     stepper_motor_hal_step_multiple(handle_, steps);
+    
+    // Update internal position tracking in 1/256 steps units
+    int32_t position_delta = 0;
+    stepper_microstep_mode_t mode = stepper_motor_hal_get_microstep_mode(handle_);
+    
+    switch (mode) {
+        case STEPPER_MICROSTEP_1_4:
+            position_delta = 64;
+            break;
+        case STEPPER_MICROSTEP_1_8:
+            position_delta = 32;
+            break;
+        case STEPPER_MICROSTEP_1_16:
+            position_delta = 16;
+            break;
+        case STEPPER_MICROSTEP_1_32:
+            position_delta = 8;
+            break;
+    }
+    
+    // Apply direction and number of steps
+    if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
+        position_ += position_delta * steps;
+    } else {
+        position_ -= position_delta * steps;
+    }
 }
 
 void StepperMotor::setTargetPosition(int32_t position) {
@@ -124,11 +182,11 @@ void StepperMotor::stepToTarget() {
     if (current_pos < target_position_) {
         // Move forward
         stepper_motor_hal_set_direction(handle_, STEPPER_DIR_CLOCKWISE);
-        stepper_motor_hal_step(handle_);
+        step();  // Use step() method which handles position tracking
     } else if (current_pos > target_position_) {
         // Move backward
         stepper_motor_hal_set_direction(handle_, STEPPER_DIR_COUNTERCLOCKWISE);
-        stepper_motor_hal_step(handle_);
+        step();  // Use step() method which handles position tracking
     }
     // If current_pos == target_position_, do nothing
 }
@@ -157,15 +215,11 @@ void StepperMotor::stepMultipleToTarget(uint32_t max_steps) {
     // Limit steps to max_steps
     uint32_t steps_to_execute = (remaining_steps > (int32_t)max_steps) ? max_steps : (uint32_t)remaining_steps;
     
-    stepper_motor_hal_step_multiple(handle_, steps_to_execute);
+    stepMultiple(steps_to_execute);  // Use stepMultiple() which handles position tracking
 }
 
 int32_t StepperMotor::getPosition() const {
-    if (handle_ == nullptr) {
-        ESP_LOGW(TAG, "Motor not initialized");
-        return 0;
-    }
-    return stepper_motor_hal_get_position(handle_);
+    return position_;
 }
 
 void StepperMotor::resetPosition() {
@@ -173,9 +227,9 @@ void StepperMotor::resetPosition() {
         ESP_LOGW(TAG, "Motor not initialized");
         return;
     }
-    stepper_motor_hal_reset_position(handle_);
     position_ = 0;
     target_position_ = 0;
+    ESP_LOGI(TAG, "Position reset to 0");
 }
 
 int32_t StepperMotor::mm_to_steps_256(int64_t mm) {

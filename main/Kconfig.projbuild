@@ -37,101 +37,101 @@ menu "Automatic Soldering Station Configuration"
     menu "Stepper Motor Pins - X Axis"
         config MOTOR_X_STEP_PIN
             int "X-Axis Step Pin"
-            default 25
+            default 21
             help
-                GPIO pin for X-axis stepper STEP signal
+                GPIO pin for X-axis stepper STEP signal (D21)
 
         config MOTOR_X_DIR_PIN
             int "X-Axis Direction Pin"
-            default 26
+            default 18
             help
-                GPIO pin for X-axis stepper DIR signal
+                GPIO pin for X-axis stepper DIR signal (D18)
 
         config MOTOR_X_ENABLE_PIN
             int "X-Axis Enable Pin"
-            default 27
+            default 25
             help
-                GPIO pin for X-axis stepper ENABLE signal
+                GPIO pin for X-axis stepper ENABLE signal (D25)
     endmenu
 
     menu "Stepper Motor Pins - Y Axis"
         config MOTOR_Y_STEP_PIN
             int "Y-Axis Step Pin"
-            default 14
+            default 22
             help
-                GPIO pin for Y-axis stepper STEP signal
+                GPIO pin for Y-axis stepper STEP signal (D22)
 
         config MOTOR_Y_DIR_PIN
             int "Y-Axis Direction Pin"
-            default 12
+            default 5
             help
-                GPIO pin for Y-axis stepper DIR signal
+                GPIO pin for Y-axis stepper DIR signal (D5)
 
         config MOTOR_Y_ENABLE_PIN
             int "Y-Axis Enable Pin"
-            default 13
+            default 26
             help
-                GPIO pin for Y-axis stepper ENABLE signal
+                GPIO pin for Y-axis stepper ENABLE signal (D26)
     endmenu
 
     menu "Stepper Motor Pins - Z Axis"
         config MOTOR_Z_STEP_PIN
             int "Z-Axis Step Pin"
-            default 33
+            default 23
             help
-                GPIO pin for Z-axis stepper STEP signal
+                GPIO pin for Z-axis stepper STEP signal (D23)
 
         config MOTOR_Z_DIR_PIN
             int "Z-Axis Direction Pin"
-            default 32
+            default 4
             help
-                GPIO pin for Z-axis stepper DIR signal
+                GPIO pin for Z-axis stepper DIR signal (D4)
 
         config MOTOR_Z_ENABLE_PIN
             int "Z-Axis Enable Pin"
-            default 15
+            default 32
             help
-                GPIO pin for Z-axis stepper ENABLE signal
+                GPIO pin for Z-axis stepper ENABLE signal (D32)
     endmenu
 
     menu "Stepper Motor Pins - Solder Supply"
         config MOTOR_S_STEP_PIN
             int "Solder Supply Step Pin"
-            default 18
+            default 19
             help
-                GPIO pin for solder supply stepper STEP signal
+                GPIO pin for solder supply stepper STEP signal (D19 - Extruder)
 
         config MOTOR_S_DIR_PIN
             int "Solder Supply Direction Pin"
-            default 19
+            default 16
             help
-                GPIO pin for solder supply stepper DIR signal
+                GPIO pin for solder supply stepper DIR signal (D16 - Extruder)
 
         config MOTOR_S_ENABLE_PIN
             int "Solder Supply Enable Pin"
-            default 21
+            default 33
             help
-                GPIO pin for solder supply stepper ENABLE signal
+                GPIO pin for solder supply stepper ENABLE signal (D33 - Extruder)
     endmenu
 
-    menu "DRV8825 Mode Pins"
+    menu "TMC2208 Mode Pins"
         config DRV8825_MODE0_PIN
-            int "DRV8825 MODE0 Pin"
+            int "TMC2208 MS1 Pin"
             default 16
             help
-                GPIO pin for DRV8825 MODE0 (M0)
+                GPIO pin for TMC2208 MS1 (Microstep Select 1)
 
         config DRV8825_MODE1_PIN
-            int "DRV8825 MODE1 Pin"
+            int "TMC2208 MS2 Pin"
             default 17
             help
-                GPIO pin for DRV8825 MODE1 (M1)
+                GPIO pin for TMC2208 MS2 (Microstep Select 2)
 
         config DRV8825_MODE2_PIN
-            int "DRV8825 MODE2 Pin"
+            int "Unused Mode Pin (Reserved)"
             default 5
             help
-                GPIO pin for DRV8825 MODE2 (M2)
+                Not used for TMC2208 (only has MS1 and MS2)
     endmenu
 
     menu "Soldering Iron Configuration"

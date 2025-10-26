@@ -55,7 +55,7 @@ stepper_motor_handle_t stepper_motor_hal_init(const stepper_motor_config_t* conf
     handle->is_initialized = true;
     handle->direction = STEPPER_DIR_CLOCKWISE;
     handle->microstep_mode = STEPPER_MICROSTEP_1_4;
-    handle->step_time_us = 1000; // Default 1ms between steps
+    handle->step_time_us = 10; // Default 100us between steps
 
     // Initialize GPIO pins
     gpio_config_t io_conf = {

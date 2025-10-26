@@ -203,12 +203,45 @@ extern "C" void app_main(void)
     init_motors();
     
     // Create motor test task
-    xTaskCreate(motor_test_task, "motor_test", 4096, NULL, 5, NULL);
+    // xTaskCreate(motor_test_task, "motor_test", 4096, NULL, 5, NULL);
     
     ESP_LOGI(TAG, "System initialized successfully");
     
+    motor_x->setEnable(true);
+    motor_x->setTargetPosition(6000);
+    motor_y->setEnable(true);
+    motor_y->setTargetPosition(6000);
+    motor_z->setEnable(true);
+    motor_z->setTargetPosition(6000);
+    motor_s->setEnable(true);
+    motor_s->setTargetPosition(6000);
+
     // Main loop
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(2));
+        if (abs(motor_x->getPosition() - motor_x->getTargetPosition()) > 100) {
+            motor_x->stepMultipleToTarget(5);
+            // motor_x->stepToTarget();
+        } else {
+            motor_x->setTargetPosition(-motor_x->getTargetPosition());    
+        }
+        if (abs(motor_y->getPosition() - motor_y->getTargetPosition()) > 100) {
+            motor_y->stepMultipleToTarget(5);
+            // motor_y->stepToTarget();
+        } else {
+            motor_y->setTargetPosition(-motor_y->getTargetPosition());    
+        }
+        if (abs(motor_z->getPosition() - motor_z->getTargetPosition()) > 100) {
+            motor_z->stepMultipleToTarget(5);
+            // motor_z->stepToTarget();
+        } else {
+            motor_z->setTargetPosition(-motor_z->getTargetPosition());
+        }
+        if (abs(motor_s->getPosition() - motor_s->getTargetPosition()) > 100) {
+            motor_s->stepMultipleToTarget(5);
+            // motor_s->stepToTarget();
+        } else {
+            motor_s->setTargetPosition(-motor_s->getTargetPosition());
+        }
     }
 }

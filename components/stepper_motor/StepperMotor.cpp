@@ -222,6 +222,10 @@ int32_t StepperMotor::getPosition() const {
     return position_;
 }
 
+int32_t StepperMotor::getTargetPosition() const {
+    return target_position_;
+}
+
 void StepperMotor::resetPosition() {
     if (handle_ == nullptr) {
         ESP_LOGW(TAG, "Motor not initialized");

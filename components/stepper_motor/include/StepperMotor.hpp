@@ -91,6 +91,11 @@ public:
     int32_t getPosition() const;
     
     /**
+     * @brief Get target position
+     */
+    int32_t getTargetPosition() const;
+    
+    /**
      * @brief Reset position counter(set current position to 0)
      */
     void resetPosition();

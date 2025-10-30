@@ -56,11 +56,6 @@ public:
     void setDirection(stepper_direction_t direction);
     
     /**
-     * @brief Set microstepping mode
-     */
-    void setMicrostepMode(stepper_microstep_mode_t mode);
-    
-    /**
      * @brief Execute single step
      */
     void step();

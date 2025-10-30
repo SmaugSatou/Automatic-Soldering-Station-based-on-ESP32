@@ -85,14 +85,6 @@ void StepperMotor::setDirection(stepper_direction_t direction) {
     stepper_motor_hal_set_direction(handle_, direction);
 }
 
-void StepperMotor::setMicrostepMode(stepper_microstep_mode_t mode) {
-    if (handle_ == nullptr) {
-        ESP_LOGW(TAG, "Motor not initialized");
-        return;
-    }
-    stepper_motor_hal_set_microstep_mode(handle_, mode);
-}
-
 void StepperMotor::step() {
     if (handle_ == nullptr) {
         ESP_LOGW(TAG, "Motor not initialized");
@@ -100,71 +92,25 @@ void StepperMotor::step() {
     }
     stepper_motor_hal_step(handle_);
     
-    // Update internal position tracking in 1/256 steps units
-    // Position delta depends on current microstepping mode:
-    // STEPPER_MICROSTEP_1_4  -> 1 step = 64/256 (full step / 4)
-    // STEPPER_MICROSTEP_1_8  -> 1 step = 32/256 (full step / 8)
-    // STEPPER_MICROSTEP_1_16 -> 1 step = 16/256 (full step / 16)
-    // STEPPER_MICROSTEP_1_32 -> 1 step = 8/256  (full step / 32)
-    
-    int32_t position_delta = 0;
-    stepper_microstep_mode_t mode = stepper_motor_hal_get_microstep_mode(handle_);
-    
-    switch (mode) {
-        case STEPPER_MICROSTEP_1_4:
-            position_delta = 64;
-            break;
-        case STEPPER_MICROSTEP_1_8:
-            position_delta = 32;
-            break;
-        case STEPPER_MICROSTEP_1_16:
-            position_delta = 16;
-            break;
-        case STEPPER_MICROSTEP_1_32:
-            position_delta = 8;
-            break;
-    }
-    
-    // Apply direction
+    // Update position based on direction
     if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
-        position_ += position_delta;
+        position_++;
     } else {
-        position_ -= position_delta;
+        position_--;
     }
 }
 
 void StepperMotor::stepMultiple(uint32_t steps) {
-    if (handle_ == nullptr) {
-        ESP_LOGW(TAG, "Motor not initialized");
-        return;
-    }
-    stepper_motor_hal_step_multiple(handle_, steps);
+    if (!handle_) return;
     
-    // Update internal position tracking in 1/256 steps units
-    int32_t position_delta = 0;
-    stepper_microstep_mode_t mode = stepper_motor_hal_get_microstep_mode(handle_);
-    
-    switch (mode) {
-        case STEPPER_MICROSTEP_1_4:
-            position_delta = 64;
-            break;
-        case STEPPER_MICROSTEP_1_8:
-            position_delta = 32;
-            break;
-        case STEPPER_MICROSTEP_1_16:
-            position_delta = 16;
-            break;
-        case STEPPER_MICROSTEP_1_32:
-            position_delta = 8;
-            break;
-    }
-    
-    // Apply direction and number of steps
+    // Update position based on direction
     if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
-        position_ += position_delta * steps;
+        position_ += steps;
     } else {
-        position_ -= position_delta * steps;
+        position_ -= steps;
     }
+    
+    stepper_motor_hal_step_multiple(handle_, steps);
 }
 
 void StepperMotor::setTargetPosition(int32_t position) {
@@ -237,14 +183,12 @@ void StepperMotor::resetPosition() {
 }
 
 int32_t StepperMotor::mm_to_steps_256(int64_t mm) {
-    // Convert millimeters to steps
-    // steps = mm * steps_per_mm
-    return static_cast<int32_t>(mm * steps_per_mm);
+    // Convert mm to steps with 256 fractional precision
+    return (int32_t)(mm * steps_per_mm);  // Remove the * 256 multiplication
 }
 
 int32_t StepperMotor::steps_256_to_mm(int32_t steps) {
-    // Convert steps to millimeters
-    // mm = steps / steps_per_mm
-    return static_cast<int32_t>(steps / steps_per_mm);
+    // Convert steps/256 back to mm
+    return (int32_t)(steps / steps_per_mm);  // Remove the / 256 division
 }
 

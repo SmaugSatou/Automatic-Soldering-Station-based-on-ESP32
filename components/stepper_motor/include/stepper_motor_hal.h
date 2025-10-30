@@ -20,16 +20,6 @@ extern "C" {
 #endif
 
 /**
- * @brief Microstepping mode configuration
- */
-typedef enum {
-    STEPPER_MICROSTEP_1_4,
-    STEPPER_MICROSTEP_1_8, 
-    STEPPER_MICROSTEP_1_16,
-    STEPPER_MICROSTEP_1_32
-} stepper_microstep_mode_t;
-
-/**
  * @brief Motor rotation direction
  */
 typedef enum {
@@ -53,8 +43,6 @@ typedef struct {
     gpio_num_t step_pin;
     gpio_num_t dir_pin;
     gpio_num_t enable_pin;
-    gpio_num_t mode0_pin;
-    gpio_num_t mode1_pin;
 } stepper_motor_config_t;
 
 /**
@@ -107,11 +95,6 @@ void stepper_motor_hal_set_enable(stepper_motor_handle_t handle, bool enable);
 void stepper_motor_hal_set_direction(stepper_motor_handle_t handle, stepper_direction_t direction);
 
 /**
- * @brief Set microstepping mode
- */
-void stepper_motor_hal_set_microstep_mode(stepper_motor_handle_t handle, stepper_microstep_mode_t mode);
-
-/**
  * @brief Execute single step
  */
 void stepper_motor_hal_step(stepper_motor_handle_t handle);
@@ -147,13 +130,7 @@ uint32_t stepper_motor_hal_get_step_time(stepper_motor_handle_t handle);
  */
 stepper_direction_t stepper_motor_hal_get_direction(stepper_motor_handle_t handle);
 
-/**
- * @brief Get current microstepping mode
- * 
- * @param handle Handle to the motor instance
- * @return stepper_microstep_mode_t Current microstepping mode
- */
-stepper_microstep_mode_t stepper_motor_hal_get_microstep_mode(stepper_motor_handle_t handle);
+
 
 #ifdef __cplusplus
 }

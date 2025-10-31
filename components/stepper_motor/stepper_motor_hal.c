@@ -20,6 +20,9 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+#define MAX_STEP_DELAY_US 2500
+#define MIN_STEP_DELAY_US 1
+
 static const char *TAG = "STEPPER_HAL";
 
 /**
@@ -145,9 +148,9 @@ void stepper_motor_hal_step(stepper_motor_handle_t handle) {
     }
 
     gpio_set_level(handle->config.step_pin, 1);
-    esp_rom_delay_us(100);
+    esp_rom_delay_us(200);
     gpio_set_level(handle->config.step_pin, 0);
-    esp_rom_delay_us(100);
+    esp_rom_delay_us(200);
 }
 
 void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t steps) {
@@ -161,16 +164,35 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
         return;
     }
     
+    int32_t l = MIN(steps, MAX_STEP_DELAY_US);
+    uint32_t delay = MAX_STEP_DELAY_US;
+
     for (uint32_t i = 0; i < steps; i++) {
         stepper_motor_hal_step(handle);
 
-        int32_t delay = MIN(1, MAX(2000, abs((int32_t)((steps / 2 - i) * 10))));
-        vTaskDelay(pdMS_TO_TICKS(delay));
+        delay = MAX(MIN_STEP_DELAY_US, MAX(l - (int32_t)i, l + (int32_t)i - (int32_t)steps));  // Simple linear ramp down
+
+        if (i % 100 == 0) {
+            ESP_LOGI(TAG, "Progress: %lu/%lu steps", i, steps);
+            ESP_LOGI(TAG, "Current delay: %lu ms", delay);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(delay / 1000));
+
+        // Convert microseconds to proper timing
+        // if (delay < 1000) {
+        //     // For delays < 1ms use esp_rom_delay_us
+        //     if ((i + 1) % 500 == 0) {
+        //         vTaskDelay(pdMS_TO_TICKS(1));  // Yield to other tasks
+        //     } else {
+        //         esp_rom_delay_us(delay);
+        //     }
+        // } else {
+        //     // For delays >= 1ms use vTaskDelay
+        //     vTaskDelay(pdMS_TO_TICKS(delay / 1000));
+        // }
 
         // Log progress every 100 steps
-        if ((i + 1) % 100 == 0) {
-            ESP_LOGI(TAG, "Progress: %lu/%lu steps", i + 1, steps);
-        }
     }
     
     ESP_LOGI(TAG, "Completed %lu steps", steps);

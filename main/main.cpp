@@ -123,20 +123,23 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "System initialized successfully");
     
     motor_x->setEnable(true);
-    motor_x->setTargetPosition(1500);
+    motor_x->setTargetPosition(2000);
     motor_y->setEnable(true);
-    motor_y->setTargetPosition(1500);
+    motor_y->setTargetPosition(2000);
     motor_z->setEnable(true);
-    motor_z->setTargetPosition(1500);
+    motor_z->setTargetPosition(2000);
     motor_s->setEnable(true);
-    motor_s->setTargetPosition(1500);
+    motor_s->setTargetPosition(2000);
 
     // Main loop
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(20));
         motor_x->stepMultipleToTarget(static_cast<uint32_t>(std::abs(motor_x->getPosition() - motor_x->getTargetPosition())));
+        vTaskDelay(pdMS_TO_TICKS(20));
         motor_y->stepMultipleToTarget(static_cast<uint32_t>(std::abs(motor_y->getPosition() - motor_y->getTargetPosition())));
+        vTaskDelay(pdMS_TO_TICKS(20));
         motor_z->stepMultipleToTarget(static_cast<uint32_t>(std::abs(motor_z->getPosition() - motor_z->getTargetPosition())));
+        vTaskDelay(pdMS_TO_TICKS(20));
         motor_s->stepMultipleToTarget(static_cast<uint32_t>(std::abs(motor_s->getPosition() - motor_s->getTargetPosition())));
 
         motor_x->setTargetPosition(-motor_x->getTargetPosition());

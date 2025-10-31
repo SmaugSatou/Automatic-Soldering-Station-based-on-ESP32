@@ -170,27 +170,14 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
     for (uint32_t i = 0; i < steps; i++) {
         stepper_motor_hal_step(handle);
 
-        delay = MAX(MIN_STEP_DELAY_US, MAX(l - (int32_t)i, l + (int32_t)i - (int32_t)steps));  // Simple linear ramp down
+        delay = MAX(MIN_STEP_DELAY_US, MAX(l - 2 * (int32_t)i, l + 2 * ((int32_t)i - (int32_t)steps)));  // Simple linear ramp down
 
         if (i % 100 == 0) {
             ESP_LOGI(TAG, "Progress: %lu/%lu steps", i, steps);
             ESP_LOGI(TAG, "Current delay: %lu ms", delay);
         }
 
-        vTaskDelay(pdMS_TO_TICKS(delay / 1000));
-
-        // Convert microseconds to proper timing
-        // if (delay < 1000) {
-        //     // For delays < 1ms use esp_rom_delay_us
-        //     if ((i + 1) % 500 == 0) {
-        //         vTaskDelay(pdMS_TO_TICKS(1));  // Yield to other tasks
-        //     } else {
-        //         esp_rom_delay_us(delay);
-        //     }
-        // } else {
-        //     // For delays >= 1ms use vTaskDelay
-        //     vTaskDelay(pdMS_TO_TICKS(delay / 1000));
-        // }
+        vTaskDelay(pdMS_TO_TICKS(MAX(delay / 1000, 1)));
 
         // Log progress every 100 steps
     }

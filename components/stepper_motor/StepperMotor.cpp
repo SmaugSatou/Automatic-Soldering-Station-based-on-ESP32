@@ -166,7 +166,7 @@ void StepperMotor::stepMultipleToTarget(uint32_t max_steps) {
     
     // Determine direction based on remaining_steps
     stepper_direction_t dir;
-    if (remaining_steps > 0 == (positive_direction_ == STEPPER_DIR_CLOCKWISE)) {
+    if ((remaining_steps > 0) == (positive_direction_ == STEPPER_DIR_CLOCKWISE)) {
         dir = STEPPER_DIR_CLOCKWISE;
     } else {
         dir = STEPPER_DIR_COUNTERCLOCKWISE;

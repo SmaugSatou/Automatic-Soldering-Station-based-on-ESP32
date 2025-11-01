@@ -1,7 +1,7 @@
 /**
  * @file StepperMotor.cpp
  * @brief Implementation of C++ stepper motor wrapper
- * 
+ *
  * Provides object-oriented interface to stepper motor HAL.
  */
 
@@ -15,8 +15,8 @@ static const char *TAG = "StepperMotor";
 
 // Constructor
 StepperMotor::StepperMotor(const stepper_motor_config_t& config, uint32_t steps_per_mm, stepper_direction_t positive_direction) :
-    position_(0), 
-    handle_(stepper_motor_hal_init(&config)), 
+    position_(0),
+    handle_(stepper_motor_hal_init(&config)),
     target_position_(0),
     steps_per_mm(steps_per_mm),
     positive_direction_(positive_direction)
@@ -39,11 +39,11 @@ StepperMotor::~StepperMotor() {
 }
 
 // Move constructor
-StepperMotor::StepperMotor(StepperMotor&& other) noexcept : 
-    position_(other.position_), 
-    handle_(other.handle_), 
+StepperMotor::StepperMotor(StepperMotor&& other) noexcept :
+    position_(other.position_),
+    handle_(other.handle_),
     target_position_(other.target_position_),
-    steps_per_mm(other.steps_per_mm) 
+    steps_per_mm(other.steps_per_mm)
 {
     other.handle_ = nullptr;
     other.position_ = 0;
@@ -57,13 +57,13 @@ StepperMotor& StepperMotor::operator=(StepperMotor&& other) noexcept {
         if (handle_ != nullptr) {
             stepper_motor_hal_deinit(handle_);
         }
-        
+
         // Move data
         position_ = other.position_;
         handle_ = other.handle_;
         target_position_ = other.target_position_;
         steps_per_mm = other.steps_per_mm;
-        
+
         // Reset other
         other.handle_ = nullptr;
         other.position_ = 0;
@@ -94,7 +94,7 @@ void StepperMotor::step() {
         return;
     }
     stepper_motor_hal_step(handle_);
-    
+
     // Update position based on direction
     if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
         position_++;
@@ -105,14 +105,14 @@ void StepperMotor::step() {
 
 void StepperMotor::stepMultiple(uint32_t steps) {
     if (!handle_) return;
-    
+
     // Update position based on direction
-    if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
+    if (stepper_motor_hal_get_direction(handle_) == positive_direction_) {
         position_ += steps;
     } else {
         position_ -= steps;
     }
-    
+
     stepper_motor_hal_step_multiple(handle_, steps);
 
     if (isEndpointReached()) {
@@ -136,9 +136,9 @@ void StepperMotor::stepToTarget() {
         ESP_LOGW(TAG, "Motor not initialized");
         return;
     }
-    
+
     int32_t current_pos = getPosition();
-    
+
     if (current_pos < target_position_) {
         // Move forward
         stepper_motor_hal_set_direction(handle_, STEPPER_DIR_CLOCKWISE);
@@ -156,32 +156,31 @@ void StepperMotor::stepMultipleToTarget(uint32_t max_steps) {
         ESP_LOGW(TAG, "Motor not initialized");
         return;
     }
-    
+
     int32_t current_pos = getPosition();
     int32_t remaining_steps = target_position_ - current_pos;
-    
+
     if (remaining_steps == 0) {
         return; // Already at target
     }
-    
+
     // Determine direction based on remaining_steps
     stepper_direction_t dir;
-    if ((remaining_steps > 0) == (positive_direction_ == STEPPER_DIR_CLOCKWISE)) {
-        dir = STEPPER_DIR_CLOCKWISE;
+    if (remaining_steps > 0) {
+        dir = positive_direction_;
     } else {
-        dir = STEPPER_DIR_COUNTERCLOCKWISE;
-        remaining_steps = -remaining_steps; // Make positive for step calculation
+        dir = (stepper_direction_t)((positive_direction_ == STEPPER_DIR_CLOCKWISE) ? STEPPER_DIR_COUNTERCLOCKWISE : STEPPER_DIR_CLOCKWISE);
     }
-    
+
     // Set direction
     stepper_motor_hal_set_direction(handle_, dir);
-    
+
     // Limit steps to max_steps
     uint32_t steps_to_execute = std::min(static_cast<uint32_t>(remaining_steps), max_steps);
-    
+
     ESP_LOGI(TAG, "Current position: %d, Target: %d", current_pos, target_position_);
     ESP_LOGI(TAG, "Remaining steps: %d, Steps to execute: %u", remaining_steps, steps_to_execute);
-    
+
     stepMultiple(steps_to_execute);
 }
 

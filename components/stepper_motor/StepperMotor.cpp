@@ -8,19 +8,22 @@
 #include "StepperMotor.hpp"
 #include "esp_log.h"
 #include <stdexcept>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"  // Add this line for vTaskDelay
 
 static const char *TAG = "StepperMotor";
 
 // Constructor
-StepperMotor::StepperMotor(const stepper_motor_config_t& config, uint32_t steps_per_mm) :
+StepperMotor::StepperMotor(const stepper_motor_config_t& config, uint32_t steps_per_mm, stepper_direction_t positive_direction) :
     position_(0), 
     handle_(stepper_motor_hal_init(&config)), 
     target_position_(0),
-    steps_per_mm(steps_per_mm)
+    steps_per_mm(steps_per_mm),
+    positive_direction_(positive_direction)
 {
     if (handle_ == nullptr) {
         ESP_LOGE(TAG, "Failed to initialize stepper motor");
-        // Cannot throw in ESP-IDF (exceptions disabled)
+        // Cannot throw in ESP-ISTEPPER_DIR_CLOCKWISEDF (exceptions disabled)
         // User should check isInitialized() after construction
     } else {
         ESP_LOGI(TAG, "StepperMotor initialized with %lu steps/mm", steps_per_mm);
@@ -111,10 +114,21 @@ void StepperMotor::stepMultiple(uint32_t steps) {
     }
     
     stepper_motor_hal_step_multiple(handle_, steps);
+
+    if (isEndpointReached()) {
+        ESP_LOGW(TAG, "Endpoint reached during stepMultiple. Reseting position to 0");
+        position_ = 0;
+    }
 }
 
 void StepperMotor::setTargetPosition(int32_t position) {
-    target_position_ = position;
+    if (handle_ == nullptr) {
+        ESP_LOGW(TAG, "Motor not initialized");
+        return;
+    }
+    ESP_LOGI(TAG, "Setting target position to %d", position);
+    target_position_ = std::max(int32_t(0), position);
+    ESP_LOGI(TAG, "Target position set to %d", target_position_);
 }
 
 void StepperMotor::stepToTarget() {
@@ -150,18 +164,25 @@ void StepperMotor::stepMultipleToTarget(uint32_t max_steps) {
         return; // Already at target
     }
     
-    // Determine direction
-    if (remaining_steps > 0) {
-        stepper_motor_hal_set_direction(handle_, STEPPER_DIR_CLOCKWISE);
+    // Determine direction based on remaining_steps
+    stepper_direction_t dir;
+    if (remaining_steps > 0 == (positive_direction_ == STEPPER_DIR_CLOCKWISE)) {
+        dir = STEPPER_DIR_CLOCKWISE;
     } else {
-        stepper_motor_hal_set_direction(handle_, STEPPER_DIR_COUNTERCLOCKWISE);
-        remaining_steps = -remaining_steps; // Make positive
+        dir = STEPPER_DIR_COUNTERCLOCKWISE;
+        remaining_steps = -remaining_steps; // Make positive for step calculation
     }
     
-    // Limit steps to max_steps
-    uint32_t steps_to_execute = (remaining_steps > (int32_t)max_steps) ? max_steps : (uint32_t)remaining_steps;
+    // Set direction
+    stepper_motor_hal_set_direction(handle_, dir);
     
-    stepMultiple(steps_to_execute);  // Use stepMultiple() which handles position tracking
+    // Limit steps to max_steps
+    uint32_t steps_to_execute = std::min(static_cast<uint32_t>(remaining_steps), max_steps);
+    
+    ESP_LOGI(TAG, "Current position: %d, Target: %d", current_pos, target_position_);
+    ESP_LOGI(TAG, "Remaining steps: %d, Steps to execute: %u", remaining_steps, steps_to_execute);
+    
+    stepMultiple(steps_to_execute);
 }
 
 int32_t StepperMotor::getPosition() const {
@@ -192,3 +213,38 @@ int32_t StepperMotor::steps_256_to_mm(int32_t steps) {
     return (int32_t)(steps / steps_per_mm);  // Remove the / 256 division
 }
 
+bool StepperMotor::isEndpointReached() const {
+    if (handle_ == nullptr) {
+        ESP_LOGW(TAG, "Motor not initialized");
+        return false;
+    }
+    return stepper_motor_hal_endpoint_reached(handle_);
+}
+
+void StepperMotor::calibrate() {
+    if (handle_ == nullptr) {
+        ESP_LOGW(TAG, "Motor not initialized");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Calibrating motor...");
+
+    // Move towards endpoint until switch is triggered
+    stepper_motor_hal_set_direction(handle_, STEPPER_DIR_COUNTERCLOCKWISE);
+    bool ennable_state = stepper_motor_hal_get_direction(handle_);
+    setEnable(true);
+
+    setDirection((positive_direction_ == STEPPER_DIR_CLOCKWISE) ? STEPPER_DIR_COUNTERCLOCKWISE : STEPPER_DIR_CLOCKWISE);
+
+    while (!isEndpointReached()) {
+        stepper_motor_hal_step_multiple(handle_, 50); // Step in small increments
+        vTaskDelay(pdMS_TO_TICKS(2)); // Small delay to avoid busy-waiting
+    }
+
+    // Reset position to zero at endpoint
+    resetPosition();
+
+    setEnable(ennable_state);
+
+    ESP_LOGI(TAG, "Motor calibrated to endpoint");
+}

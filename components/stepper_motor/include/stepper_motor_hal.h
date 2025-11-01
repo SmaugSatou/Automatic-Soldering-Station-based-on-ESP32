@@ -43,6 +43,7 @@ typedef struct {
     gpio_num_t step_pin;
     gpio_num_t dir_pin;
     gpio_num_t enable_pin;
+    gpio_num_t endpoint_pin;    // Limit switch input pin
 } stepper_motor_config_t;
 
 /**
@@ -130,7 +131,14 @@ uint32_t stepper_motor_hal_get_step_time(stepper_motor_handle_t handle);
  */
 stepper_direction_t stepper_motor_hal_get_direction(stepper_motor_handle_t handle);
 
-
+/**
+ * @brief Check if the motor's endpoint switch is triggered
+ * 
+ * @param handle Handle to the motor instance
+ * @return bool true if endpoint switch is triggered (active LOW), false otherwise or if no endpoint configured
+ * @note Assumes endpoint switch is connected between GPIO and GND (active LOW)
+ */
+bool stepper_motor_hal_endpoint_reached(stepper_motor_handle_t handle);
 
 #ifdef __cplusplus
 }

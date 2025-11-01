@@ -52,6 +52,11 @@ menu "Automatic Soldering Station Configuration"
             default 25
             help
                 GPIO pin for X-axis stepper ENABLE signal (D25)
+        config MOTOR_X_MIN_ENDPOINT_PIN
+            int "X-Axis Minimum Endstop Pin"
+            default 12
+            help
+                GPIO pin for X-axis minimum endstop switch (D12)
     endmenu
 
     menu "Stepper Motor Pins - Y Axis"
@@ -72,6 +77,12 @@ menu "Automatic Soldering Station Configuration"
             default 26
             help
                 GPIO pin for Y-axis stepper ENABLE signal (D26)
+
+        config MOTOR_Y_MIN_ENDPOINT_PIN
+            int "Y-Axis Minimum Endstop Pin"
+            default 13
+            help
+                GPIO pin for Y-axis minimum endstop switch (D13)
     endmenu
 
     menu "Stepper Motor Pins - Z Axis"
@@ -92,6 +103,12 @@ menu "Automatic Soldering Station Configuration"
             default 32
             help
                 GPIO pin for Z-axis stepper ENABLE signal (D32)
+        config MOTOR_Z_MIN_ENDPOINT_PIN
+            int "Z-Axis Minimum Endstop Pin"
+            default 14
+            help
+                GPIO pin for Z-axis minimum endstop switch (D14)
+            
     endmenu
 
     menu "Stepper Motor Pins - Solder Supply"
@@ -114,50 +131,30 @@ menu "Automatic Soldering Station Configuration"
                 GPIO pin for solder supply stepper ENABLE signal (D33 - Extruder)
     endmenu
 
-    menu "TMC2208 Mode Pins"
-        config DRV8825_MODE0_PIN
-            int "TMC2208 MS1 Pin"
-            default 16
-            help
-                GPIO pin for TMC2208 MS1 (Microstep Select 1)
-
-        config DRV8825_MODE1_PIN
-            int "TMC2208 MS2 Pin"
-            default 17
-            help
-                GPIO pin for TMC2208 MS2 (Microstep Select 2)
-
-        config DRV8825_MODE2_PIN
-            int "Unused Mode Pin (Reserved)"
-            default 5
-            help
-                Not used for TMC2208 (only has MS1 and MS2)
-    endmenu
-
     menu "Soldering Iron Configuration"
         config SOLDERING_IRON_PWM_PIN
             int "Soldering Iron PWM Pin"
             default 22
             help
-                GPIO pin for PWM control of heating element (connected to MOSFET gate)
+                GPIO pin for soldering iron PWM control
 
         config SOLDERING_IRON_PWM_FREQUENCY
             int "PWM Frequency (Hz)"
             default 1000
             help
-                PWM frequency for heater control
+                PWM frequency for soldering iron control
 
         config SOLDERING_IRON_MAX_TEMP
             int "Maximum Temperature (°C)"
             default 450
             help
-                Maximum allowed temperature for safety
+                Maximum allowed temperature for soldering iron
 
         config SOLDERING_IRON_DEFAULT_TEMP
             int "Default Temperature (°C)"
             default 350
             help
-                Default soldering temperature
+                Default temperature setting for soldering iron
     endmenu
 
     menu "Temperature Sensor Configuration"

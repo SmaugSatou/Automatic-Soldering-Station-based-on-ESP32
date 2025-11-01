@@ -60,7 +60,7 @@ stepper_motor_handle_t stepper_motor_hal_init(const stepper_motor_config_t* conf
     handle->is_initialized = true;
     handle->direction = STEPPER_DIR_CLOCKWISE;
 
-    // Initialize GPIO pins
+    // Initialize output GPIO pins (step, dir, enable)
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
@@ -70,6 +70,30 @@ stepper_motor_handle_t stepper_motor_hal_init(const stepper_motor_config_t* conf
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .pull_up_en = GPIO_PULLUP_DISABLE
     };
+
+    if (gpio_config(&io_conf) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to configure output GPIO pins");
+        free(handle);
+        return NULL;
+    }
+
+    // Initialize endpoint pin as input with pull-up
+    if (config->endpoint_pin != GPIO_NUM_NC) {
+        gpio_config_t endpoint_conf = {
+            .intr_type = GPIO_INTR_DISABLE,
+            .mode = GPIO_MODE_INPUT,
+            .pin_bit_mask = (1ULL << config->endpoint_pin),
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .pull_up_en = GPIO_PULLUP_ENABLE
+        };
+
+        if (gpio_config(&endpoint_conf) != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to configure endpoint GPIO pin");
+            free(handle);
+            return NULL;
+        }
+        ESP_LOGI(TAG, "  ENDPOINT: GPIO %d", config->endpoint_pin);
+    }
 
 
     if (gpio_config(&io_conf) != ESP_OK) {
@@ -192,4 +216,23 @@ stepper_direction_t stepper_motor_hal_get_direction(stepper_motor_handle_t handl
     }
 
     return handle->direction;
+}
+
+bool stepper_motor_hal_endpoint_reached(stepper_motor_handle_t handle) {
+    if (handle == NULL || !handle->is_initialized) {
+        ESP_LOGW(TAG, "Handle is NULL or not initialized");
+        return false;
+    }
+
+    if (handle->config.endpoint_pin == GPIO_NUM_NC) {
+        ESP_LOGD(TAG, "No endpoint pin configured");
+        return false;
+    }
+
+    // Assuming active LOW endpoint switch (switch closes to GND)
+    bool endpoint_state = !gpio_get_level(handle->config.endpoint_pin);
+    if (endpoint_state) {
+        ESP_LOGI(TAG, "Endpoint reached!");
+    }
+    return endpoint_state;
 }

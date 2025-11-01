@@ -168,9 +168,9 @@ extern "C" void app_main(void)
         // vTaskDelay(pdMS_TO_TICKS(20));
         // motor_s->stepMultipleToTarget(static_cast<uint32_t>(std::abs(motor_s->getPosition() - motor_s->getTargetPosition())));
 
-        motor_x->setTargetPosition(get_random_position(10, 4000));
-        motor_y->setTargetPosition(get_random_position(10, 4000));
-        motor_z->setTargetPosition(get_random_position(10, 4000));
+        motor_x->setTargetPosition(get_random_position(10, 6000));
+        motor_y->setTargetPosition(get_random_position(10, 5000));
+        motor_z->setTargetPosition(get_random_position(10, 8000));
         // motor_s->setTargetPosition(get_random_position(10, 5000));
     }
 }

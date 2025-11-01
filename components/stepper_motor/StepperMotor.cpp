@@ -107,7 +107,7 @@ void StepperMotor::stepMultiple(uint32_t steps) {
     if (!handle_) return;
     
     // Update position based on direction
-    if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
+    if (stepper_motor_hal_get_direction(handle_) == positive_direction_) {
         position_ += steps;
     } else {
         position_ -= steps;
@@ -166,11 +166,10 @@ void StepperMotor::stepMultipleToTarget(uint32_t max_steps) {
     
     // Determine direction based on remaining_steps
     stepper_direction_t dir;
-    if (remaining_steps > 0 == (positive_direction_ == STEPPER_DIR_CLOCKWISE)) {
-        dir = STEPPER_DIR_CLOCKWISE;
+    if (remaining_steps > 0) {
+        dir = positive_direction_;
     } else {
-        dir = STEPPER_DIR_COUNTERCLOCKWISE;
-        remaining_steps = -remaining_steps; // Make positive for step calculation
+        dir = (stepper_direction_t)((positive_direction_ == STEPPER_DIR_CLOCKWISE) ? STEPPER_DIR_COUNTERCLOCKWISE : STEPPER_DIR_CLOCKWISE);
     }
     
     // Set direction

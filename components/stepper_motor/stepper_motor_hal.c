@@ -1,7 +1,7 @@
 /**
  * @file stepper_motor_hal.c
  * @brief Implementation of stepper motor HAL
- * 
+ *
  * Low-level driver implementation for TMC2208 stepper motor control.
  */
 
@@ -108,11 +108,11 @@ stepper_motor_handle_t stepper_motor_hal_init(const stepper_motor_config_t* conf
     // TMC2208: ENABLE pin is active LOW (0 = enabled, 1 = disabled)
     gpio_set_level(config->enable_pin, 1);  // Start disabled
     ESP_LOGI(TAG, "ENABLE pin set HIGH (motor disabled)");
-    
+
     // Set default direction to clockwise
     gpio_set_level(config->dir_pin, 0);
     ESP_LOGI(TAG, "DIR pin set LOW (clockwise)");
-    
+
     ESP_LOGI(TAG, "Stepper motor initialization complete");
     return handle;
 }
@@ -155,7 +155,7 @@ void stepper_motor_hal_set_direction(stepper_motor_handle_t handle, stepper_dire
 
     gpio_set_level(handle->config.dir_pin, direction == STEPPER_DIR_CLOCKWISE ? 0 : 1);
     handle->direction = direction;
-    ESP_LOGI(TAG, "Direction set to %s (DIR pin = %d)", 
+    ESP_LOGI(TAG, "Direction set to %s (DIR pin = %d)",
              direction == STEPPER_DIR_CLOCKWISE ? "CLOCKWISE" : "COUNTERCLOCKWISE",
              direction == STEPPER_DIR_CLOCKWISE ? 0 : 1);
 }
@@ -187,7 +187,7 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
         ESP_LOGE(TAG, "Motor is not enabled! Cannot step.");
         return;
     }
-    
+
     int32_t l = MIN(steps, MAX_STEP_DELAY_US);
     uint32_t delay = MAX_STEP_DELAY_US;
 
@@ -201,11 +201,15 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
             ESP_LOGI(TAG, "Current delay: %lu ms", delay);
         }
 
-        vTaskDelay(pdMS_TO_TICKS(MAX(delay / 1000, 1)));
+        if (i % 6000 == 5999) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(MAX(delay / 1000, 2)));
 
         // Log progress every 100 steps
     }
-    
+
     ESP_LOGI(TAG, "Completed %lu steps", steps);
 }
 

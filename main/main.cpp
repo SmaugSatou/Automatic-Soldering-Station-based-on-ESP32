@@ -42,26 +42,27 @@ typedef struct {
 } position_t;
 
 // Test pattern: 4 corner soldering points + center point
+// Z-axis: 16000 = safe height (up), 18000 = soldering position (down)
 static const position_t test_positions[] = {
-    {1000, 1000, 1000, false, 0},      // Move to safe height above first point
-    {1000, 1000, 200, true, 2000},     // Lower and solder point 1 (2s)
-    {1000, 1000, 1000, false, 0},      // Lift up
+    {1000, 1000, 16000, false, 0},      // Move to safe height above first point
+    {1000, 1000, 18000, true, 2000},     // Lower to solder point 1 (2s)
+    {1000, 1000, 16000, false, 0},      // Lift up
 
-    {3000, 1000, 1000, false, 0},      // Move to point 2
-    {3000, 1000, 200, true, 2000},     // Lower and solder point 2 (2s)
-    {3000, 1000, 1000, false, 0},      // Lift up
+    {3000, 1000, 16000, false, 0},      // Move to point 2
+    {3000, 1000, 18000, true, 2000},     // Lower to solder point 2 (2s)
+    {3000, 1000, 16000, false, 0},      // Lift up
 
-    {3000, 4000, 1000, false, 0},      // Move to point 3
-    {3000, 4000, 200, true, 2000},     // Lower and solder point 3 (2s)
-    {3000, 4000, 1000, false, 0},      // Lift up
+    {3000, 4000, 16000, false, 0},      // Move to point 3
+    {3000, 4000, 18000, true, 2000},     // Lower to solder point 3 (2s)
+    {3000, 4000, 16000, false, 0},      // Lift up
 
-    {1000, 4000, 1000, false, 0},      // Move to point 4
-    {1000, 4000, 200, true, 2000},     // Lower and solder point 4 (2s)
-    {1000, 4000, 1000, false, 0},      // Lift up
+    {1000, 4000, 16000, false, 0},      // Move to point 4
+    {1000, 4000, 18000, true, 2000},     // Lower to solder point 4 (2s)
+    {1000, 4000, 16000, false, 0},      // Lift up
 
-    {2000, 2500, 1000, false, 0},      // Move to center point
-    {2000, 2500, 200, true, 3000},     // Lower and solder center (3s)
-    {2000, 2500, 1000, false, 0},      // Lift up
+    {2000, 2500, 16000, false, 0},      // Move to center point
+    {2000, 2500, 18000, true, 3000},     // Lower to solder center (3s)
+    {2000, 2500, 16000, false, 0},      // Lift up
 };
 static const int NUM_POSITIONS = sizeof(test_positions) / sizeof(test_positions[0]);
 static int current_position_index = 0;

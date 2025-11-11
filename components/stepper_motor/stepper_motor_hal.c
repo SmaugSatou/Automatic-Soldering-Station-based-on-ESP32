@@ -176,7 +176,7 @@ void stepper_motor_hal_step(stepper_motor_handle_t handle, uint32_t signal_width
     gpio_set_level(handle->config.step_pin, 1);
     esp_rom_delay_us(signal_width_us);
     gpio_set_level(handle->config.step_pin, 0);
-    esp_rom_delay_us(signal_width_us);
+    // esp_rom_delay_us(signal_width_us);
 }
 
 void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t steps) {
@@ -190,7 +190,7 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
         return;
     }
 
-    int32_t l = MIN(steps, MAX_STEP_DELAY_US);
+    int32_t l = MAX_STEP_DELAY_US; // MIN(steps, MAX_STEP_DELAY_US);
     int32_t delay = MAX_STEP_DELAY_US;
 
     for (uint32_t i = 0; i < steps; i++) {
@@ -198,7 +198,7 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
         delay = MAX(MIN_STEP_DELAY_US, MAX(l - 1 * (int32_t)i, l + 1 * ((int32_t)i - (int32_t)steps)));  // Simple linear ramp down
 
         // stepper_motor_hal_step(handle, (uint32_t)(5.0 + ((double)delay) / ((double)MAX_STEP_DELAY_US) * 195.0));
-        stepper_motor_hal_step(handle, (uint32_t)(delay / 2 + 200));
+        stepper_motor_hal_step(handle, (uint32_t)(delay + 320));
 
         if (i % 100 == 99) {
             ESP_LOGI(TAG, "Progress: %lu/%lu steps", i, steps);

@@ -93,7 +93,7 @@ void StepperMotor::step() {
         ESP_LOGW(TAG, "Motor not initialized");
         return;
     }
-    stepper_motor_hal_step(handle_);
+    stepper_motor_hal_step(handle_, 200);
 
     // Update position based on direction
     if (stepper_motor_hal_get_direction(handle_) == STEPPER_DIR_CLOCKWISE) {
@@ -236,7 +236,7 @@ void StepperMotor::calibrate() {
     setDirection((positive_direction_ == STEPPER_DIR_CLOCKWISE) ? STEPPER_DIR_COUNTERCLOCKWISE : STEPPER_DIR_CLOCKWISE);
 
     while (!isEndpointReached()) {
-        stepper_motor_hal_step_multiple(handle_, 50); // Step in small increments
+        stepper_motor_hal_step_multiple(handle_, 100); // Step in small increments
         vTaskDelay(pdMS_TO_TICKS(2)); // Small delay to avoid busy-waiting
     }
 

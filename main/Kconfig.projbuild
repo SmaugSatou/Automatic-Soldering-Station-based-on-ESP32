@@ -57,6 +57,16 @@ menu "Automatic Soldering Station Configuration"
             default 12
             help
                 GPIO pin for X-axis minimum endstop switch (D12)
+        config MM_IN_MICROSTEP
+            int "Millimeters per Microstep"
+            default 0.04
+            help
+                Number of millimeters the X-axis moves per microstep
+        config MICROSTEPS_IN_MM
+            int "Microsteps per Millimeter"
+            default 25
+            help
+                Number of microsteps required to move 1 millimeter
     endmenu
 
     menu "Stepper Motor Pins - Y Axis"
@@ -83,6 +93,16 @@ menu "Automatic Soldering Station Configuration"
             default 13
             help
                 GPIO pin for Y-axis minimum endstop switch (D13)
+        config MM_IN_MICROSTEP
+            int "Millimeters per Microstep"
+            default 0.04
+            help
+                Number of millimeters the Y-axis moves per microstep
+        config MICROSTEPS_IN_MM
+            int "Microsteps per Millimeter"
+            default 25
+            help
+                Number of microsteps required to move 1 millimeter
     endmenu
 
     menu "Stepper Motor Pins - Z Axis"
@@ -172,91 +192,6 @@ menu "Automatic Soldering Station Configuration"
                 Number of ADC samples to average for temperature reading
     endmenu
 
-    menu "Motion Control Parameters"
-        config MAX_VELOCITY_X
-            int "Max X Velocity (mm/s)"
-            default 100
-            help
-                Maximum velocity for X-axis movement
-
-        config MAX_VELOCITY_Y
-            int "Max Y Velocity (mm/s)"
-            default 100
-            help
-                Maximum velocity for Y-axis movement
-
-        config MAX_VELOCITY_Z
-            int "Max Z Velocity (mm/s)"
-            default 50
-            help
-                Maximum velocity for Z-axis movement
-
-        config WORK_AREA_X
-            int "Work Area X Size (mm)"
-            default 200
-            help
-                Maximum X-axis travel distance
-
-        config WORK_AREA_Y
-            int "Work Area Y Size (mm)"
-            default 200
-            help
-                Maximum Y-axis travel distance
-
-        config WORK_AREA_Z
-            int "Work Area Z Size (mm)"
-            default 100
-            help
-                Maximum Z-axis travel distance
-
-        config STEPS_PER_MM_X
-            int "Steps per mm - X Axis"
-            default 80
-            help
-                Stepper motor steps per millimeter for X-axis
-
-        config STEPS_PER_MM_Y
-            int "Steps per mm - Y Axis"
-            default 80
-            help
-                Stepper motor steps per millimeter for Y-axis
-
-        config STEPS_PER_MM_Z
-            int "Steps per mm - Z Axis"
-            default 400
-            help
-                Stepper motor steps per millimeter for Z-axis
-    endmenu
-
-    menu "Display Configuration (Optional)"
-        config ENABLE_OLED_DISPLAY
-            bool "Enable OLED Display"
-            default n
-            help
-                Enable optional OLED display for status information
-
-        config DISPLAY_I2C_ADDRESS
-            hex "Display I2C Address"
-            default 0x3C
-            depends on ENABLE_OLED_DISPLAY
-            help
-                I2C address of OLED display
-
-        config DISPLAY_SDA_PIN
-            int "Display SDA Pin"
-            default 23
-            depends on ENABLE_OLED_DISPLAY
-            help
-                GPIO pin for I2C SDA
-
-        config DISPLAY_SCL_PIN
-            int "Display SCL Pin"
-            default 22
-            depends on ENABLE_OLED_DISPLAY
-            help
-                GPIO pin for I2C SCL
-    endmenu
-
     menu "Web Server Configuration"
         config WEB_SERVER_PORT
             int "HTTP Server Port"
@@ -270,5 +205,7 @@ menu "Automatic Soldering Station Configuration"
             help
                 Maximum number of URI handlers for web server
     endmenu
+
+
 
 endmenu

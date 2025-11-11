@@ -57,12 +57,12 @@ menu "Automatic Soldering Station Configuration"
             default 12
             help
                 GPIO pin for X-axis minimum endstop switch (D12)
-        config MM_IN_MICROSTEP
-            int "Millimeters per Microstep"
-            default 0.04
+        config MOTOR_X_MM_IN_MICROSTEP_X1000
+            int "Millimeters per Microstep (x1000)"
+            default 40
             help
-                Number of millimeters the X-axis moves per microstep
-        config MICROSTEPS_IN_MM
+                Number of millimeters the X-axis moves per microstep (in x1000)
+        config MOTOR_X_MICROSTEPS_IN_MM
             int "Microsteps per Millimeter"
             default 25
             help
@@ -93,12 +93,12 @@ menu "Automatic Soldering Station Configuration"
             default 13
             help
                 GPIO pin for Y-axis minimum endstop switch (D13)
-        config MM_IN_MICROSTEP
-            int "Millimeters per Microstep"
-            default 0.04
+        config MOTOR_Y_MM_IN_MICROSTEP_X1000
+            int "Millimeters per Microstep (x1000)"
+            default 40
             help
-                Number of millimeters the Y-axis moves per microstep
-        config MICROSTEPS_IN_MM
+                Number of millimeters the Y-axis moves per microstep (in x1000)
+        config MOTOR_Y_MICROSTEPS_IN_MM
             int "Microsteps per Millimeter"
             default 25
             help
@@ -128,7 +128,19 @@ menu "Automatic Soldering Station Configuration"
             default 14
             help
                 GPIO pin for Z-axis minimum endstop switch (D14)
-            
+        config MOTOR_Z_MM_IN_MICROSTEP_X1000
+            int "Millimeters per Microstep (x1000)"
+            default 10
+            help
+                Number of millimeters the Z-axis moves per microstep (in x1000)
+                (10 = 0.01mm per microstep for 8mm/rev with 1/4 microstepping)
+                
+        config MOTOR_Z_MICROSTEPS_IN_MM
+            int "Microsteps per Millimeter"
+            default 100
+            help
+                Number of microsteps required to move 1 millimeter
+                (100 = 800 microsteps per 8mm rotation with 1/4 microstepping)
     endmenu
 
     menu "Stepper Motor Pins - Solder Supply"
@@ -204,6 +216,28 @@ menu "Automatic Soldering Station Configuration"
             default 20
             help
                 Maximum number of URI handlers for web server
+    endmenu
+
+    menu "Task Watchdog Configuration"
+        config ESP_TASK_WDT_TIMEOUT_S
+            int "Task Watchdog Timeout (seconds)"
+            default 30
+            range 5 60
+            help
+                Watchdog timeout in seconds for motor control tasks.
+                Set to 30 seconds to allow long motor movements without interruption.
+
+        config ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0
+            bool "Watch CPU0 Idle Task"
+            default y
+            help
+                Watch IDLE task on CPU0
+                
+        config ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1
+            bool "Watch CPU1 Idle Task"  
+            default y
+            help
+                Watch IDLE task on CPU1
     endmenu
 
 

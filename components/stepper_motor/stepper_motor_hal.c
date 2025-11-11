@@ -14,13 +14,15 @@
 #include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_task_wdt.h"
+#include "hal/wdt_hal.h"
 
 #include "stepper_motor_hal.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-#define MAX_STEP_DELAY_US 2500
+#define MAX_STEP_DELAY_US 400
 #define MIN_STEP_DELAY_US 1
 
 static const char *TAG = "STEPPER_HAL";
@@ -160,7 +162,7 @@ void stepper_motor_hal_set_direction(stepper_motor_handle_t handle, stepper_dire
              direction == STEPPER_DIR_CLOCKWISE ? 0 : 1);
 }
 
-void stepper_motor_hal_step(stepper_motor_handle_t handle) {
+void stepper_motor_hal_step(stepper_motor_handle_t handle, uint32_t signal_width_us) {
     if (handle == NULL || !handle->is_initialized) {
         ESP_LOGW(TAG, "Handle is NULL or not initialized");
         return;
@@ -172,9 +174,9 @@ void stepper_motor_hal_step(stepper_motor_handle_t handle) {
     }
 
     gpio_set_level(handle->config.step_pin, 1);
-    esp_rom_delay_us(200);
+    esp_rom_delay_us(signal_width_us);
     gpio_set_level(handle->config.step_pin, 0);
-    esp_rom_delay_us(200);
+    esp_rom_delay_us(signal_width_us);
 }
 
 void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t steps) {
@@ -189,27 +191,35 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
     }
 
     int32_t l = MIN(steps, MAX_STEP_DELAY_US);
-    uint32_t delay = MAX_STEP_DELAY_US;
+    int32_t delay = MAX_STEP_DELAY_US;
 
     for (uint32_t i = 0; i < steps; i++) {
-        stepper_motor_hal_step(handle);
 
-        delay = MAX(MIN_STEP_DELAY_US, MAX(l - 2 * (int32_t)i, l + 2 * ((int32_t)i - (int32_t)steps)));  // Simple linear ramp down
+        delay = MAX(MIN_STEP_DELAY_US, MAX(l - 1 * (int32_t)i, l + 1 * ((int32_t)i - (int32_t)steps)));  // Simple linear ramp down
 
-        if (i % 100 == 0) {
+        // stepper_motor_hal_step(handle, (uint32_t)(5.0 + ((double)delay) / ((double)MAX_STEP_DELAY_US) * 195.0));
+        stepper_motor_hal_step(handle, (uint32_t)(delay / 2 + 200));
+
+        if (i % 100 == 99) {
             ESP_LOGI(TAG, "Progress: %lu/%lu steps", i, steps);
             ESP_LOGI(TAG, "Current delay: %lu ms", delay);
+            reset_watchdog_timer();
         }
 
-        if (i % 6000 == 5999) {
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
+        // if (i % 6000 == 5999) {
+        //     vTaskDelay(pdMS_TO_TICKS(100));
+        // }
+        // esp_rom_delay_us(delay);
 
-        vTaskDelay(pdMS_TO_TICKS(MAX(delay / 1000, 2)));
+        // if (delay < 1000) {
+        //     esp_rom_delay_us(delay);
+        // } else {
+        //     vTaskDelay(pdMS_TO_TICKS(MAX(delay / 1000, 2)));
+        // }
 
         // Log progress every 100 steps
     }
-
+    
     ESP_LOGI(TAG, "Completed %lu steps", steps);
 }
 
@@ -239,4 +249,11 @@ bool stepper_motor_hal_endpoint_reached(stepper_motor_handle_t handle) {
         ESP_LOGI(TAG, "Endpoint reached!");
     }
     return endpoint_state;
+}
+
+void reset_watchdog_timer() {
+    wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
+    wdt_hal_write_protect_disable(&rtc_wdt_ctx);
+    wdt_hal_feed(&rtc_wdt_ctx);
+    wdt_hal_write_protect_enable(&rtc_wdt_ctx);
 }

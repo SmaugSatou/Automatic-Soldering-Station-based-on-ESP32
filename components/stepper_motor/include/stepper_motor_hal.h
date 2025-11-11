@@ -98,7 +98,7 @@ void stepper_motor_hal_set_direction(stepper_motor_handle_t handle, stepper_dire
 /**
  * @brief Execute single step
  */
-void stepper_motor_hal_step(stepper_motor_handle_t handle);
+void stepper_motor_hal_step(stepper_motor_handle_t handle, uint32_t signal_width_us);
 
 /**
  * @brief Execute multiple steps
@@ -139,6 +139,8 @@ stepper_direction_t stepper_motor_hal_get_direction(stepper_motor_handle_t handl
  * @note Assumes endpoint switch is connected between GPIO and GND (active LOW)
  */
 bool stepper_motor_hal_endpoint_reached(stepper_motor_handle_t handle);
+
+void reset_watchdog_timer();
 
 #ifdef __cplusplus
 }

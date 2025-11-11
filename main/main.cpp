@@ -160,7 +160,7 @@ static void init_motors() {
         .enable_pin = static_cast<gpio_num_t>(CONFIG_MOTOR_X_ENABLE_PIN),
         .endpoint_pin = static_cast<gpio_num_t>(CONFIG_MOTOR_X_MIN_ENDPOINT_PIN)  // Changed from ENDPOINT to MIN_ENDPOINT
     };
-    motor_x = new StepperMotor(config_x, CONFIG_STEPS_PER_MM_X, STEPPER_DIR_COUNTERCLOCKWISE);
+    motor_x = new StepperMotor(config_x, CONFIG_MOTOR_X_MICROSTEPS_IN_MM, STEPPER_DIR_COUNTERCLOCKWISE);
     if (!motor_x->isInitialized()) {
         ESP_LOGE(TAG, "Failed to initialize X-axis motor");
         return;
@@ -174,7 +174,7 @@ static void init_motors() {
         .enable_pin = static_cast<gpio_num_t>(CONFIG_MOTOR_Y_ENABLE_PIN),
         .endpoint_pin = static_cast<gpio_num_t>(CONFIG_MOTOR_Y_MIN_ENDPOINT_PIN)  // Changed from ENDPOINT to MIN_ENDPOINT
     };
-    motor_y = new StepperMotor(config_y, CONFIG_STEPS_PER_MM_Y, STEPPER_DIR_CLOCKWISE);
+    motor_y = new StepperMotor(config_y, CONFIG_MOTOR_Y_MICROSTEPS_IN_MM, STEPPER_DIR_CLOCKWISE);
     if (!motor_y->isInitialized()) {
         ESP_LOGE(TAG, "Failed to initialize Y-axis motor");
         return;
@@ -188,7 +188,7 @@ static void init_motors() {
         .enable_pin = static_cast<gpio_num_t>(CONFIG_MOTOR_Z_ENABLE_PIN),
         .endpoint_pin = static_cast<gpio_num_t>(CONFIG_MOTOR_Z_MIN_ENDPOINT_PIN)  // Changed from ENDPOINT to MIN_ENDPOINT
     };
-    motor_z = new StepperMotor(config_z, CONFIG_STEPS_PER_MM_Z, STEPPER_DIR_CLOCKWISE);
+    motor_z = new StepperMotor(config_z, CONFIG_MOTOR_Z_MICROSTEPS_IN_MM, STEPPER_DIR_CLOCKWISE);
     if (!motor_z->isInitialized()) {
         ESP_LOGE(TAG, "Failed to initialize Z-axis motor");
         return;
@@ -406,7 +406,7 @@ static void test_sequence_task(void* pvParameters) {
 
     // Step 5: HEATING -> EXECUTING (automatic via heating callback)
     ESP_LOGI(TAG, "Step 5: Waiting for soldering execution to complete");
-    vTaskDelay(pdMS_TO_TICKS(45000));  // Wait for pattern execution (15 movements + 5 solder operations)
+    vTaskDelay(pdMS_TO_TICKS(4500));  // Wait for pattern execution (15 movements + 5 solder operations)
 
     // Step 6: NORMAL_EXIT -> IDLE
     ESP_LOGI(TAG, "Step 6: Returning to IDLE state");

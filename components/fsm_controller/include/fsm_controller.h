@@ -31,7 +31,7 @@ typedef enum {
     FSM_STATE_HEATING,               // Heating soldering iron (Green)
     FSM_STATE_EXECUTING,             // Executing soldering task (Green)
     FSM_STATE_PAUSED,                // Task paused (Yellow)
-    FSM_STATE_NORMAL_EXIT,           // Normal task completion (Green)
+    FSM_STATE_NORMAL_EXIT,           // Task cleanup: cooldown, safety checks (Yellow)
     FSM_STATE_CALIBRATION_ERROR,     // Calibration error (Red)
     FSM_STATE_HEATING_ERROR,         // Heating/temperature error (Red)
     FSM_STATE_DATA_ERROR,            // Sensor data error (Red)
@@ -60,7 +60,7 @@ typedef enum {
     FSM_EVENT_DATA_ERROR,            // Bad data from sensors
     FSM_EVENT_EXIT_REQUEST,          // Exit requested from paused state
     FSM_EVENT_CONTINUE_TASK,         // Continue task from pause
-    FSM_EVENT_DEINIT_SUCCESS,        // Deinitialization successful
+    FSM_EVENT_COOLDOWN_COMPLETE,     // Iron cooldown completed successfully
     FSM_EVENT_COOLING_ERROR,         // Cooling error occurred
     FSM_EVENT_COUNT                  // Total number of events
 } fsm_event_t;
@@ -98,7 +98,22 @@ typedef struct {
     float temperature_tolerance;         // Temperature tolerance (±°C)
     uint32_t heating_timeout_ms;         // Maximum heating time before error
     uint32_t calibration_timeout_ms;     // Maximum calibration time
+    float safe_temperature;              // Safe temperature for cooldown (°C)
+    uint32_t cooldown_timeout_ms;        // Maximum cooldown time before error
 } fsm_config_t;
+
+/**
+ * @brief Execution context structure
+ *
+ * This structure can be used to maintain state across FSM ticks during
+ * long-running operations. User application can extend this or use their own.
+ */
+typedef struct {
+    uint32_t start_time_ms;             // Operation start time
+    uint32_t iteration_count;            // Number of iterations/steps completed
+    bool operation_complete;             // Flag indicating completion
+    void* user_context;                  // User-defined context data
+} fsm_execution_context_t;
 
 /**
  * @brief FSM Controller handle
@@ -271,6 +286,26 @@ bool fsm_controller_is_in_error(fsm_controller_handle_t handle);
  * @return Time in current state in milliseconds
  */
 uint32_t fsm_controller_get_time_in_state(fsm_controller_handle_t handle);
+
+/**
+ * @brief Get pointer to execution context for current state
+ *
+ * This allows callbacks to maintain state across FSM ticks for
+ * non-blocking operations. The context is reset on state transitions.
+ *
+ * @param handle FSM controller handle
+ * @return Pointer to execution context, or NULL on error
+ */
+fsm_execution_context_t* fsm_controller_get_execution_context(fsm_controller_handle_t handle);
+
+/**
+ * @brief Initialize execution context helper
+ *
+ * Convenience function to initialize context with start time
+ *
+ * @param context Pointer to context to initialize
+ */
+void fsm_execution_context_init(fsm_execution_context_t* context);
 
 #ifdef __cplusplus
 }

@@ -8,4 +8,6 @@ idf_component_register(
         nvs_flash
         stepper_motor
         fsm_controller
+        execution_fsm
+        esp_timer
 )

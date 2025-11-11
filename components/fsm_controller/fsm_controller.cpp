@@ -56,11 +56,14 @@ struct fsm_controller_s {
 
     // Statistics
     fsm_statistics_t statistics;
+
+    // Execution context for current state
+    fsm_execution_context_t exec_context;
 };
 
 /**
  * @brief State transition table
- * Defines all valid state transitions based on the FSM diagram
+ * Defines all valid state transitions
  */
 static const state_transition_t state_transitions[] = {
     // From INIT
@@ -98,7 +101,7 @@ static const state_transition_t state_transitions[] = {
     {FSM_STATE_PAUSED, FSM_EVENT_CONTINUE_TASK, FSM_STATE_HEATING},
 
     // From NORMAL_EXIT
-    {FSM_STATE_NORMAL_EXIT, FSM_EVENT_DEINIT_SUCCESS, FSM_STATE_IDLE},
+    {FSM_STATE_NORMAL_EXIT, FSM_EVENT_COOLDOWN_COMPLETE, FSM_STATE_IDLE},
     {FSM_STATE_NORMAL_EXIT, FSM_EVENT_COOLING_ERROR, FSM_STATE_HEATING_ERROR},
 
     // From ERROR states to LOCK
@@ -149,7 +152,7 @@ static const char* event_names[] = {
     "DATA_ERROR",
     "EXIT_REQUEST",
     "CONTINUE_TASK",
-    "DEINIT_SUCCESS",
+    "COOLDOWN_COMPLETE",
     "COOLING_ERROR"
 };
 
@@ -198,6 +201,9 @@ fsm_controller_handle_t fsm_controller_init(const fsm_config_t* config) {
 
     // Initialize statistics
     memset(&handle->statistics, 0, sizeof(fsm_statistics_t));
+
+    // Initialize execution context
+    memset(&handle->exec_context, 0, sizeof(fsm_execution_context_t));
 
     ESP_LOGI(TAG, "FSM Controller initialized in state: %s", state_names[handle->current_state]);
 
@@ -303,6 +309,10 @@ static bool transition_to_state(fsm_controller_handle_t handle, fsm_state_t new_
     handle->current_state = new_state;
     handle->state_enter_time = get_time_ms();
 
+    // Reset execution context for new state
+    memset(&handle->exec_context, 0, sizeof(fsm_execution_context_t));
+    handle->exec_context.start_time_ms = get_time_ms();
+
     if (handle->config.enable_logging) {
         ESP_LOGI(TAG, "State transition: %s -> %s",
                  state_names[old_state], state_names[new_state]);
@@ -396,7 +406,7 @@ fsm_state_color_t fsm_controller_get_state_color(fsm_state_t state) {
         case FSM_STATE_HEATING:
         case FSM_STATE_EXECUTING:
         case FSM_STATE_NORMAL_EXIT:
-            return FSM_COLOR_GREEN;
+            return FSM_COLOR_YELLOW;
 
         case FSM_STATE_CALIBRATION_ERROR:
         case FSM_STATE_HEATING_ERROR:
@@ -529,4 +539,27 @@ uint32_t fsm_controller_get_time_in_state(fsm_controller_handle_t handle) {
     }
 
     return get_time_ms() - handle->state_enter_time;
+}
+
+/**
+ * @brief Get execution context
+ */
+fsm_execution_context_t* fsm_controller_get_execution_context(fsm_controller_handle_t handle) {
+    if (!handle) {
+        return NULL;
+    }
+
+    return &handle->exec_context;
+}
+
+/**
+ * @brief Initialize execution context
+ */
+void fsm_execution_context_init(fsm_execution_context_t* context) {
+    if (!context) {
+        return;
+    }
+
+    memset(context, 0, sizeof(fsm_execution_context_t));
+    context->start_time_ms = (uint32_t)(esp_timer_get_time() / 1000);
 }

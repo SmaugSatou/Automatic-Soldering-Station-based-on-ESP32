@@ -19,6 +19,8 @@
 #include "sdkconfig.h"
 
 #include "fsm_controller.h"
+#include "web_server.h"
+#include "wifi_manager.h"
 #include "stepper_motor_hal.h"
 #include "StepperMotor.hpp"
 #include "execution_fsm.h"
@@ -331,6 +333,41 @@ static void test_sequence_task(void* pvParameters) {
     ESP_LOGI(TAG, "=== Test Sequence Complete ===");
 
     vTaskDelete(nullptr);
+}
+
+static void init_webserver() {
+    ESP_LOGI(TAG, "Initializing WiFi Access Point...");
+    wifi_manager_config_t wifi_config = {
+        .ssid = "Паяйко",
+        .channel = 1,
+        .max_connections = 4
+    };
+    
+    wifi_manager_handle_t wifi_handle = wifi_manager_init(&wifi_config);
+    if (!wifi_handle) {
+        ESP_LOGE(TAG, "Failed to initialize WiFi manager");
+    } else {
+        ESP_LOGI(TAG, "WiFi AP started. SSID: %s, IP: %s", 
+                 wifi_config.ssid, wifi_manager_get_ip_address(wifi_handle));
+    }
+    
+    // Initialize Web Server with FSM handle
+    ESP_LOGI(TAG, "Initializing web server...");
+    web_server_config_t web_config = {
+        .port = 80,
+        .max_uri_handlers = 24,
+        .max_resp_headers = 8,
+        .enable_websocket = true
+    };
+    
+    web_server_handle_t web_handle = web_server_init(&web_config, fsm_handle);
+    if (!web_handle) {
+        ESP_LOGE(TAG, "Failed to initialize web server");
+    } else {
+        ESP_LOGI(TAG, "Web server started on port %d", web_config.port);
+        ESP_LOGI(TAG, "Access web interface at: http://%s", 
+                 wifi_manager_get_ip_address(wifi_handle));
+    }
 }
 
 extern "C" void app_main(void)

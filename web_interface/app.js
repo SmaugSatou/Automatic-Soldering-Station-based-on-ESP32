@@ -564,23 +564,8 @@ function parseDrillToGCode(drillContent) {
         // Move to position with safe height
         gcode.push(`G0 X${point.x.toFixed(3)} Y${point.y.toFixed(3)} Z${SOLDERING_CONFIG.safeHeight.toFixed(1)}`);
         
-        // Lower to approach height
-        gcode.push(`G0 Z${SOLDERING_CONFIG.approachHeight} F${SOLDERING_CONFIG.approachFeedRate}`);
-        
-        // Lower slowly to contact height
-        gcode.push(`G1 Z${SOLDERING_CONFIG.contactHeight} F${SOLDERING_CONFIG.contactFeedRate}`);
-        
-        // Preheat pad
-        gcode.push(`G4 P${SOLDERING_CONFIG.preheatTime}  ; Preheat pad`);
-        
         // Feed solder
         gcode.push(`S${SOLDERING_CONFIG.solderFeedAmount}              ; Feed solder`);
-        
-        // Let solder flow
-        gcode.push(`G4 P${SOLDERING_CONFIG.flowTime}   ; Let solder flow`);
-        
-        // Retract to safe height
-        gcode.push(`G0 Z${SOLDERING_CONFIG.safeHeight.toFixed(1)}     ; Retract`);
     }
     
     // Cleanup

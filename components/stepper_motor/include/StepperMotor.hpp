@@ -108,14 +108,14 @@ public:
     bool isEndpointReached() const;
 
     /**
-     * @brief Convert millimeters to steps/256 for current motor configuration
+     * @brief Convert millimeters to microsteps for current motor configuration
      */
-    int32_t mm_to_steps_256(int64_t mm);
+    int32_t mm_to_microsteps(int64_t mm);
 
     /**
-     * @brief Convert steps/256 to millimeters for current motor configuration
+     * @brief Convert microsteps to millimeters for current motor configuration
      */
-    int32_t steps_256_to_mm(int32_t steps);
+    int32_t microsteps_to_mm(int32_t microsteps);
 
     /**
      * @brief Calibrate motor by moving to endpoint switch

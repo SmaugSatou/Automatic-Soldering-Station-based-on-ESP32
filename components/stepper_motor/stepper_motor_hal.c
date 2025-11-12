@@ -201,8 +201,8 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
         stepper_motor_hal_step(handle, (uint32_t)(delay + 320));
 
         if (i % 100 == 99) {
-            ESP_LOGI(TAG, "Progress: %lu/%lu steps", i, steps);
-            ESP_LOGI(TAG, "Current delay: %lu ms", delay);
+            // ESP_LOGI(TAG, "Progress: %lu/%lu steps", i, steps);
+            // ESP_LOGI(TAG, "Current delay: %lu ms", delay);
             reset_watchdog_timer();
         }
 

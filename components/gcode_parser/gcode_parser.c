@@ -188,25 +188,25 @@ bool gcode_parser_parse_line(gcode_parser_handle_t handle, const char* line, gco
                     cmd->y = value;
                     break;
                 case 'Z':
+                    // Z parameter is parsed but ignored (Z movement is system-configured)
                     cmd->has_z = true;
                     cmd->z = value;
+                    ESP_LOGD(TAG, "Z parameter ignored (Z movement handled by system)");
                     break;
                 case 'F':
+                    // F (feed rate) parameter is parsed but ignored (feed rates are system-configured)
                     cmd->has_f = true;
                     cmd->f = value;
+                    ESP_LOGD(TAG, "F parameter ignored (feed rates handled by system)");
                     break;
                 case 'S':
                     cmd->has_s = true;
                     cmd->s = (uint32_t)value;
                     break;
                 case 'T':
-                    cmd->has_t = true;
-                    cmd->t = value;
-                    break;
                 case 'P':
-                    // P parameter (for dwell time in seconds)
-                    cmd->has_t = true;
-                    cmd->t = value;
+                    // T and P parameters are ignored (timing is system-configured)
+                    ESP_LOGD(TAG, "%c parameter ignored (timing handled by system)", param_char);
                     break;
                 default:
                     ESP_LOGW(TAG, "Unknown parameter: %c", param_char);
@@ -231,9 +231,9 @@ bool gcode_parser_validate_command(gcode_parser_handle_t handle, const gcode_com
     // Basic validation - only G0 (move) and S (feed solder) are supported
     switch (cmd->type) {
         case GCODE_CMD_MOVE:
-            // At least one axis should be specified for G0
-            if (!cmd->has_x && !cmd->has_y && !cmd->has_z) {
-                ESP_LOGW(TAG, "G0 move command without coordinates");
+            // X and Y coordinates are required for G0 (Z is system-configured)
+            if (!cmd->has_x || !cmd->has_y) {
+                ESP_LOGW(TAG, "G0 move command requires X and Y coordinates");
                 return false;
             }
             break;

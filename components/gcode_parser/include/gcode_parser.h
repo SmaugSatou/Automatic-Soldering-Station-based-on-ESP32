@@ -5,11 +5,14 @@
  * Parses and validates G-Code commands for motion and soldering operations.
  *
  * SUPPORTED COMMANDS:
- * - G0 X Y Z [F] : Rapid positioning (move to position)
- * - S<amount>    : Feed solder (custom command)
+ * - G0 X<pos> Y<pos> : Move to XY position (Z/F parameters ignored)
+ * - S<amount>        : Feed solder (custom command)
  *
- * All other commands (G1, G4, G28, M104, M109, etc.) are ignored.
- * System handles homing, temperature control, and timing automatically.
+ * IGNORED/SYSTEM-HANDLED:
+ * - Z coordinates: System controls Z movement (safe, approach, contact heights)
+ * - F (feed rate): System uses configured feed rates
+ * - G1, G4, G28, M104, M109, etc.: All other G/M-codes ignored
+ * - Temperature, homing, timing: All handled by system configuration
  */
 
 #ifndef GCODE_PARSER_H
@@ -40,21 +43,29 @@ typedef enum {
 
 /**
  * @brief Parsed G-Code command structure
+ *
+ * ACTIVELY USED FIELDS:
+ * - type: Command type (GCODE_CMD_MOVE or GCODE_CMD_FEED_SOLDER)
+ * - x, y: Position coordinates (for G0 move commands)
+ * - s: Solder feed amount (for S commands)
+ *
+ * PARSED BUT IGNORED:
+ * - z, f, t: Parsed for compatibility but not used (system-configured)
  */
 typedef struct {
     gcode_command_type_t type;
     bool has_x;
     bool has_y;
-    bool has_z;
-    bool has_f;
+    bool has_z;        // Parsed but ignored
+    bool has_f;        // Parsed but ignored
     bool has_s;
-    bool has_t;
-    double x;
-    double y;
-    double z;
-    double f;
-    uint32_t s;
-    double t;
+    bool has_t;        // Parsed but ignored
+    double x;          // Used: X position
+    double y;          // Used: Y position
+    double z;          // Ignored: Z is system-configured
+    double f;          // Ignored: Feed rate is system-configured
+    uint32_t s;        // Used: Solder feed amount
+    double t;          // Ignored: Timing is system-configured
 } gcode_command_t;
 
 /**

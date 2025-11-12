@@ -12,6 +12,7 @@
 #include <cmath>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -24,6 +25,8 @@
 #include "stepper_motor_hal.h"
 #include "StepperMotor.hpp"
 #include "execution_fsm.h"
+#include "soldering_iron_hal.h"
+#include "temperature_sensor_hal.h"
 
 static const char *TAG = "MAIN";
 
@@ -33,32 +36,25 @@ StepperMotor* motor_y = nullptr;
 StepperMotor* motor_z = nullptr;
 StepperMotor* motor_s = nullptr;
 
+// Soldering iron and temperature sensor handles
+static soldering_iron_handle_t iron_handle = nullptr;
+static temperature_sensor_handle_t temp_sensor_handle = nullptr;
+
+// Temperature control settings (from FSM config)
+static float target_temperature = 350.0f;
+static float temperature_tolerance = 5.0f;
+static float safe_temperature = 50.0f;
+static uint32_t heating_timeout_ms = 60000;
+static uint32_t cooldown_timeout_ms = 120000;
+
 // FSM controller handle
 static fsm_controller_handle_t fsm_handle = nullptr;
 
-// Test pattern: 23 solder points (4 corners + center) - positions in mm, will be converted to steps
-static constexpr int NUM_SOLDER_POINTS = 23;
-static solder_point_t solder_points[NUM_SOLDER_POINTS];
-
-static void init_solder_points() {
-    // Define positions in mm
-    int32_t x_mm[NUM_SOLDER_POINTS] = {0, 
-        250, 0, 1, 2, 4, 8, 10, 20, 40, 80, 160,
-        160, 160, 160, 160, 160, 160, 160, 160, 160, 160, 160};      // X positions in mm
-    int32_t y_mm[NUM_SOLDER_POINTS] = {0, 
-        220, 220, 220, 220, 220, 220, 220, 220, 220, 220, 220,
-        220, 0, 1, 2, 4, 8, 10, 20, 40, 80, 160};     // Y positions in mm
-    int32_t z_mm[NUM_SOLDER_POINTS] = {0};             // Z positions in mm
-    
-    // Convert to steps using motor-specific conversion
-    for (int i = 0; i < NUM_SOLDER_POINTS; i++) {
-        solder_points[i].x = motor_x->mm_to_microsteps(x_mm[i]);
-        solder_points[i].y = motor_y->mm_to_microsteps(y_mm[i]);
-        solder_points[i].z = motor_z->mm_to_microsteps(z_mm[i]);
-        solder_points[i].solder = true;
-        solder_points[i].solder_time_ms = 2000;
-    }
-}
+// Global GCode buffer (RAM storage instead of filesystem)
+char* g_gcode_buffer = nullptr;
+size_t g_gcode_size = 0;
+bool g_gcode_loaded = false;
+SemaphoreHandle_t g_gcode_mutex = nullptr;
 
 // Execution sub-FSM instance (initialized in on_enter_executing)
 static execution_sub_fsm_t exec_sub_fsm;
@@ -126,8 +122,79 @@ static void init_motors() {
     ESP_LOGI(TAG, "Solder supply motor initialized");
 }
 
+/**
+ * @brief Initialize soldering iron and temperature sensor
+ */
+static void init_heating_system() {
+    ESP_LOGI(TAG, "Initializing heating system...");
+
+    // Initialize temperature sensor (MAX6675)
+    temperature_sensor_config_t temp_config = {
+        .host_id = VSPI_HOST,
+        .pin_miso = static_cast<gpio_num_t>(CONFIG_TEMP_SENSOR_MISO_PIN),
+        .pin_mosi = GPIO_NUM_NC,  // MAX6675 is read-only
+        .pin_clk = static_cast<gpio_num_t>(CONFIG_TEMP_SENSOR_CLK_PIN),
+        .pin_cs = static_cast<gpio_num_t>(CONFIG_TEMP_SENSOR_CS_PIN),
+        .dma_chan = 0,
+        .clock_speed_hz = 2000000  // 2 MHz for MAX6675
+    };
+
+    temp_sensor_handle = temperature_sensor_hal_init(&temp_config);
+    if (!temp_sensor_handle) {
+        ESP_LOGE(TAG, "Failed to initialize temperature sensor");
+        return;
+    }
+    ESP_LOGI(TAG, "Temperature sensor initialized");
+
+    // Initialize soldering iron PWM control
+    soldering_iron_config_t iron_config = {
+        .heater_pwm_pin = GPIO_NUM_25,  // Default heater PWM pin (configurable via Kconfig)
+        .pwm_timer = LEDC_TIMER_0,
+        .pwm_channel = LEDC_CHANNEL_0,
+        .pwm_frequency = 1000,  // 1 kHz PWM
+        .pwm_resolution = LEDC_TIMER_10_BIT,
+        .max_temperature = 450.0,
+        .min_temperature = 20.0
+    };
+
+    iron_handle = soldering_iron_hal_init(&iron_config);
+    if (!iron_handle) {
+        ESP_LOGE(TAG, "Failed to initialize soldering iron");
+        return;
+    }
+
+    // Set PID constants for temperature control
+    soldering_iron_hal_set_pid_constants(iron_handle, 2.0, 0.5, 1.0);
+    ESP_LOGI(TAG, "Soldering iron initialized with PID control");
+}
+
+/**
+ * @brief Read current temperature from sensor
+ * @return Temperature in Celsius, or -1.0 on error
+ */
+static double get_current_temperature() {
+    double temp = 0.0;
+    if (!temp_sensor_handle) {
+        return -1.0;
+    }
+
+    esp_err_t ret = temperature_sensor_hal_read_temperature(temp_sensor_handle, &temp);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to read temperature");
+        return -1.0;
+    }
+
+    return temp;
+}
+
 static bool on_enter_idle(void* user_data) {
     ESP_LOGI(TAG, "FSM: IDLE - System ready");
+
+    // Ensure heater is off when idle
+    if (iron_handle) {
+        soldering_iron_hal_set_enable(iron_handle, false);
+    }
+
     return true;
 }
 
@@ -170,7 +237,22 @@ static bool on_enter_ready(void* user_data) {
 }
 
 static bool on_enter_heating(void* user_data) {
-    ESP_LOGI(TAG, "FSM: HEATING (simulated)");
+    ESP_LOGI(TAG, "FSM: HEATING - Starting temperature control");
+
+    if (!iron_handle) {
+        ESP_LOGE(TAG, "Soldering iron not initialized!");
+        fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_ERROR);
+        return false;
+    }
+
+    // Set target temperature
+    soldering_iron_hal_set_target_temperature(iron_handle, target_temperature);
+    ESP_LOGI(TAG, "Target temperature: %.1f°C", target_temperature);
+
+    // Enable heater
+    soldering_iron_hal_set_enable(iron_handle, true);
+    ESP_LOGI(TAG, "Heater enabled");
+
     return true;
 }
 
@@ -178,10 +260,42 @@ static bool on_execute_heating(void* user_data) {
     fsm_execution_context_t* ctx = fsm_controller_get_execution_context(fsm_handle);
     if (!ctx) return false;
 
-    uint32_t time_heating = (esp_timer_get_time() / 1000) - ctx->start_time_ms;
+    // Read current temperature
+    double current_temp = get_current_temperature();
+    if (current_temp < 0) {
+        ESP_LOGE(TAG, "Temperature sensor error");
+        fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_ERROR);
+        return false;
+    }
 
-    if (time_heating >= 2000 && !ctx->operation_complete) {
-        ESP_LOGI(TAG, "Heating complete");
+    // Update PID controller with current temperature
+    soldering_iron_hal_update_control(iron_handle, current_temp);
+
+    // Get target temperature
+    double target_temp = soldering_iron_hal_get_target_temperature(iron_handle);
+
+    // Check if target temperature reached
+    double temp_diff = fabs(current_temp - target_temp);
+
+    // Log temperature every 2 seconds
+    uint32_t time_heating = (esp_timer_get_time() / 1000) - ctx->start_time_ms;
+    if (time_heating % 2000 < 100) {  // Every ~2 seconds
+        double power = soldering_iron_hal_get_power(iron_handle);
+        ESP_LOGI(TAG, "Heating: Current=%.1f°C, Target=%.1f°C, Diff=%.1f°C, Power=%.1f%%",
+                 current_temp, target_temp, temp_diff, power);
+    }
+
+    // Check for timeout
+    if (time_heating > heating_timeout_ms) {
+        ESP_LOGE(TAG, "Heating timeout!");
+        soldering_iron_hal_set_enable(iron_handle, false);
+        fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_ERROR);
+        return false;
+    }
+
+    // Temperature reached and stable
+    if (temp_diff <= temperature_tolerance && !ctx->operation_complete) {
+        ESP_LOGI(TAG, "Target temperature reached: %.1f°C (±%.1f°C)", current_temp, temperature_tolerance);
         ctx->operation_complete = true;
         fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_SUCCESS);
     }
@@ -190,8 +304,6 @@ static bool on_execute_heating(void* user_data) {
 }
 
 static bool on_enter_executing(void* user_data) {
-    ESP_LOGI(TAG, "FSM: EXECUTING - %d solder points", NUM_SOLDER_POINTS);
-
     motor_x->setEnable(true);
     motor_y->setEnable(true);
     motor_z->setEnable(true);
@@ -206,15 +318,53 @@ static bool on_enter_executing(void* user_data) {
     };
 
     exec_sub_fsm_init(&exec_sub_fsm, &exec_config);
+
+    // Check if GCode is loaded in RAM
+    if (!g_gcode_loaded || !g_gcode_buffer) {
+        ESP_LOGE(TAG, "=== NO GCODE UPLOADED ===");
+        ESP_LOGE(TAG, "Cannot execute - no GCode in RAM");
+        ESP_LOGE(TAG, "Please upload GCode via POST /api/gcode/upload");
+        fsm_controller_post_event(fsm_handle, FSM_EVENT_DATA_ERROR);
+        return false;
+    }
+
+    ESP_LOGI(TAG, "=== EXECUTING FROM GCODE ===");
+    ESP_LOGI(TAG, "GCode buffer: %d bytes in RAM", g_gcode_size);
+
+    if (!exec_sub_fsm_load_gcode_from_ram(&exec_sub_fsm, g_gcode_buffer, g_gcode_size)) {
+        ESP_LOGE(TAG, "Failed to load GCode from RAM");
+        fsm_controller_post_event(fsm_handle, FSM_EVENT_DATA_ERROR);
+        return false;
+    }
+
+    ESP_LOGI(TAG, "GCode parser initialized - starting execution");
     return true;
 }
 
 static bool on_execute_executing(void* user_data) {
-    exec_sub_fsm_process(&exec_sub_fsm, solder_points, NUM_SOLDER_POINTS);
+    // Maintain temperature during execution
+    double current_temp = get_current_temperature();
+    if (current_temp > 0 && iron_handle) {
+        soldering_iron_hal_update_control(iron_handle, current_temp);
+
+        // Check for temperature errors during execution
+        double target_temp = soldering_iron_hal_get_target_temperature(iron_handle);
+        if (fabs(current_temp - target_temp) > 30.0) {  // Temperature drift > 30°C
+            ESP_LOGW(TAG, "Temperature drift detected: %.1f°C (target: %.1f°C)",
+                     current_temp, target_temp);
+        }
+    }
+
+    // Execute GCode line by line
+    exec_sub_fsm_process_gcode(&exec_sub_fsm);
 
     if (exec_sub_fsm_get_state(&exec_sub_fsm) == EXEC_STATE_COMPLETE) {
-        ESP_LOGI(TAG, "Execution complete: %d/%d points",
-                 exec_sub_fsm_get_completed_count(&exec_sub_fsm), NUM_SOLDER_POINTS);
+        ESP_LOGI(TAG, "GCode execution complete: %d commands executed",
+                 exec_sub_fsm_get_completed_count(&exec_sub_fsm));
+
+        // Cleanup GCode resources
+        exec_sub_fsm_cleanup_gcode(&exec_sub_fsm);
+
         fsm_controller_post_event(fsm_handle, FSM_EVENT_TASK_DONE);
     }
 
@@ -223,6 +373,12 @@ static bool on_execute_executing(void* user_data) {
 
 static bool on_enter_normal_exit(void* user_data) {
     ESP_LOGI(TAG, "FSM: NORMAL_EXIT - Cleanup and cooldown");
+
+    // Disable heater immediately
+    if (iron_handle) {
+        soldering_iron_hal_set_enable(iron_handle, false);
+        ESP_LOGI(TAG, "Heater disabled - Starting cooldown");
+    }
 
     // Motors already at home, disable them
     motor_x->setEnable(false);
@@ -243,14 +399,31 @@ static bool on_execute_normal_exit(void* user_data) {
     fsm_execution_context_t* ctx = fsm_controller_get_execution_context(fsm_handle);
     if (!ctx) return false;
 
+    // Read current temperature
+    double current_temp = get_current_temperature();
+    if (current_temp < 0) {
+        ESP_LOGW(TAG, "Cannot read temperature during cooldown");
+        current_temp = 200.0;  // Assume hot if sensor fails
+    }
+
     uint32_t time_cooldown = (esp_timer_get_time() / 1000) - ctx->start_time_ms;
-    const uint32_t COOLDOWN_TIME = 5000; // 5s simulated cooldown
 
-    // In real system: check temperature sensor instead
-    // if (get_iron_temperature() <= safe_temp) { ... }
+    // Log temperature every 5 seconds during cooldown
+    if (time_cooldown % 5000 < 100) {
+        ESP_LOGI(TAG, "Cooldown: Current=%.1f°C, Safe=%.1f°C, Time=%lus",
+                 current_temp, safe_temperature, time_cooldown / 1000);
+    }
 
-    if (time_cooldown >= COOLDOWN_TIME && !ctx->operation_complete) {
-        ESP_LOGI(TAG, "Cooldown complete - System safe");
+    // Check for timeout
+    if (time_cooldown > cooldown_timeout_ms) {
+        ESP_LOGW(TAG, "Cooldown timeout! Current temp: %.1f°C", current_temp);
+        fsm_controller_post_event(fsm_handle, FSM_EVENT_COOLING_ERROR);
+        return false;
+    }
+
+    // Check if cooled down to safe temperature
+    if (current_temp <= safe_temperature && !ctx->operation_complete) {
+        ESP_LOGI(TAG, "Cooldown complete - System safe at %.1f°C", current_temp);
         ctx->operation_complete = true;
         fsm_controller_post_event(fsm_handle, FSM_EVENT_COOLDOWN_COMPLETE);
     }
@@ -259,8 +432,6 @@ static bool on_execute_normal_exit(void* user_data) {
 }
 
 static void init_fsm(void) {
-    init_solder_points();
-    
     fsm_config_t config = {
         .tick_rate_ms = 100,
         .enable_logging = true,
@@ -310,31 +481,6 @@ static void fsm_task(void* pvParameters) {
     }
 }
 
-static void test_sequence_task(void* pvParameters) {
-    vTaskDelay(pdMS_TO_TICKS(2000));
-
-    ESP_LOGI(TAG, "=== Test Sequence Start ===");
-
-    fsm_controller_post_event(fsm_handle, FSM_EVENT_INIT_DONE);
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    fsm_controller_post_event(fsm_handle, FSM_EVENT_REQUEST_CALIBRATION);
-    vTaskDelay(pdMS_TO_TICKS(8000));
-
-    vTaskDelay(pdMS_TO_TICKS(2000));
-
-    fsm_controller_post_event(fsm_handle, FSM_EVENT_TASK_APPROVED);
-    vTaskDelay(pdMS_TO_TICKS(3000));
-
-    vTaskDelay(pdMS_TO_TICKS(45000));
-
-    vTaskDelay(pdMS_TO_TICKS(8000));
-
-    ESP_LOGI(TAG, "=== Test Sequence Complete ===");
-
-    vTaskDelete(nullptr);
-}
-
 static void init_webserver() {
     ESP_LOGI(TAG, "Initializing WiFi Access Point...");
     wifi_manager_config_t wifi_config = {
@@ -342,15 +488,15 @@ static void init_webserver() {
         .channel = 1,
         .max_connections = 4
     };
-    
+
     wifi_manager_handle_t wifi_handle = wifi_manager_init(&wifi_config);
     if (!wifi_handle) {
         ESP_LOGE(TAG, "Failed to initialize WiFi manager");
     } else {
-        ESP_LOGI(TAG, "WiFi AP started. SSID: %s, IP: %s", 
+        ESP_LOGI(TAG, "WiFi AP started. SSID: %s, IP: %s",
                  wifi_config.ssid, wifi_manager_get_ip_address(wifi_handle));
     }
-    
+
     // Initialize Web Server with FSM handle
     ESP_LOGI(TAG, "Initializing web server...");
     web_server_config_t web_config = {
@@ -359,13 +505,13 @@ static void init_webserver() {
         .max_resp_headers = 8,
         .enable_websocket = true
     };
-    
+
     web_server_handle_t web_handle = web_server_init(&web_config, fsm_handle);
     if (!web_handle) {
         ESP_LOGE(TAG, "Failed to initialize web server");
     } else {
         ESP_LOGI(TAG, "Web server started on port %d", web_config.port);
-        ESP_LOGI(TAG, "Access web interface at: http://%s", 
+        ESP_LOGI(TAG, "Access web interface at: http://%s",
                  wifi_manager_get_ip_address(wifi_handle));
     }
 }
@@ -381,13 +527,23 @@ extern "C" void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
+    // Create mutex for GCode buffer protection
+    g_gcode_mutex = xSemaphoreCreateMutex();
+    if (!g_gcode_mutex) {
+        ESP_LOGE(TAG, "Failed to create GCode mutex!");
+    } else {
+        ESP_LOGI(TAG, "GCode buffer mutex created");
+    }
+
     init_motors();
+    init_heating_system();
     init_fsm();
+    init_webserver();
 
     xTaskCreate(fsm_task, "fsm_task", 4096, nullptr, 5, nullptr);
-    xTaskCreate(test_sequence_task, "test_sequence", 4096, nullptr, 4, nullptr);
 
     ESP_LOGI(TAG, "System initialized");
+    ESP_LOGI(TAG, "Waiting for commands from web interface...");
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));

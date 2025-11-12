@@ -5,4 +5,5 @@ idf_component_register(
         stepper_motor
         esp_timer
         freertos
+        gcode_parser
 )

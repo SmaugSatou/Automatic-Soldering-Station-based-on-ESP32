@@ -12,9 +12,10 @@ idf_component_register(
     # 3. Залежності
     # Ми повідомляємо системі збірки, що цей компонент
     # потребує інші системні бібліотеки
-    REQUIRES driver     # Для HAL (driver/spi_master.h)
-             log       # Для HAL (esp_log.h)
-             esp_common    # Для HAL (esp_err_t)
-             cxx    # Необхідно для будь-якого C++ коду
-             freertos      # Для C++ (ймовірно, для Task або Mutex)
+    REQUIRES
+          esp_driver_spi
+          log       # Для HAL (esp_log.h)
+          esp_common    # Для HAL (esp_err_t)
+          cxx    # Необхідно для будь-якого C++ коду
+          freertos      # Для C++ (ймовірно, для Task або Mutex)
 )

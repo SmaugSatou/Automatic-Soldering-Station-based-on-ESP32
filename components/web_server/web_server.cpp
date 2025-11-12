@@ -337,11 +337,19 @@ static esp_err_t motor_status_handler(httpd_req_t *req) {
 static esp_err_t gcode_start_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "G-Code start request received");
 
-    // TODO: Start G-Code execution
-    // TODO: Validate that G-Code is loaded
-    // TODO: Check safety conditions
+    bool event_posted = false;
+    if (server_handle && server_handle->fsm_handle) {
+        if (fsm_controller_post_event(server_handle->fsm_handle, FSM_EVENT_TASK_APPROVED)) {
+            ESP_LOGI(TAG, "Posted FSM_EVENT_TASK_APPROVED to FSM controller");
+            event_posted = true;
+        } else {
+            ESP_LOGW(TAG, "Failed to post FSM_EVENT_TASK_APPROVED");
+        }
+    }
 
-    const char* response = "{\"success\":true,\"message\":\"G-Code execution started\"}";
+    const char* response = event_posted
+        ? "{\"success\":true,\"message\":\"G-Code execution started\"}"
+        : "{\"success\":false,\"message\":\"Failed to start execution\"}";
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");

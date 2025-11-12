@@ -42,7 +42,7 @@ static temperature_sensor_handle_t temp_sensor_handle = nullptr;
 
 // Temperature control settings (from FSM config)
 static float target_temperature = 350.0f;
-static float temperature_tolerance = 5.0f;
+static float temperature_tolerance = 20.0f;  // Increased from 5.0 to 20.0 for easier heating target
 static float safe_temperature = 50.0f;
 static uint32_t heating_timeout_ms = 60000;
 static uint32_t cooldown_timeout_ms = 120000;
@@ -164,8 +164,9 @@ static void init_heating_system() {
     }
 
     // Set PID constants for temperature control
-    soldering_iron_hal_set_pid_constants(iron_handle, 2.0, 0.5, 1.0);
-    ESP_LOGI(TAG, "Soldering iron initialized with PID control");
+    // Increased Kp for faster response, reduced Ki and Kd to prevent oscillation
+    soldering_iron_hal_set_pid_constants(iron_handle, 10.0, 0.1, 0.5);
+    ESP_LOGI(TAG, "Soldering iron initialized with PID control (Kp=10.0, Ki=0.1, Kd=0.5)");
 }
 
 /**
@@ -459,7 +460,7 @@ static void init_fsm(void) {
         .enable_logging = true,
         .enable_statistics = true,
         .target_temperature = 350.0f,
-        .temperature_tolerance = 5.0f,
+        .temperature_tolerance = 20.0f,
         .heating_timeout_ms = 60000,
         .calibration_timeout_ms = 30000,
         .safe_temperature = 50.0f,

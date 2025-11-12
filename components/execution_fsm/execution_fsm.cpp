@@ -306,34 +306,37 @@ static bool execute_gcode_command(execution_sub_fsm_t* fsm, const gcode_command_
 
     switch (cmd->type) {
         case GCODE_CMD_MOVE: {
-            // G0/G1 - Move to position
-            bool has_move = false;
+            // G0/G1 - Move to position with proper Z height management
+            bool has_xy_move = false;
 
+            // Step 1: Move Z to safe height first (if not already there)
+            int32_t current_z = motor_z->getPosition();
+            if (current_z != fsm->config.safe_z_height) {
+                ESP_LOGI(TAG, "Moving Z to safe height: %ld steps", fsm->config.safe_z_height);
+                motor_z->setTargetPosition(fsm->config.safe_z_height);
+                uint32_t z_steps = static_cast<uint32_t>(std::abs(current_z - fsm->config.safe_z_height));
+                if (z_steps > 0) motor_z->stepMultipleToTarget(z_steps);
+            }
+
+            // Step 2: Move X and Y to target position
             if (cmd->has_x) {
                 int32_t target_x = motor_x->mm_to_microsteps(cmd->x);
                 motor_x->setTargetPosition(target_x);
-                has_move = true;
+                has_xy_move = true;
             }
 
             if (cmd->has_y) {
                 int32_t target_y = motor_y->mm_to_microsteps(cmd->y);
                 motor_y->setTargetPosition(target_y);
-                has_move = true;
+                has_xy_move = true;
             }
 
-            if (cmd->has_z) {
-                int32_t target_z = motor_z->mm_to_microsteps(cmd->z);
-                motor_z->setTargetPosition(target_z);
-                has_move = true;
-            }
-
-            if (has_move) {
-                ESP_LOGI(TAG, "Moving to: X=%.2f Y=%.2f Z=%.2f",
+            if (has_xy_move) {
+                ESP_LOGI(TAG, "Moving to XY: X=%.2f Y=%.2f (Z at safe height)",
                          cmd->has_x ? cmd->x : motor_x->microsteps_to_mm(motor_x->getPosition()),
-                         cmd->has_y ? cmd->y : motor_y->microsteps_to_mm(motor_y->getPosition()),
-                         cmd->has_z ? cmd->z : motor_z->microsteps_to_mm(motor_z->getPosition()));
+                         cmd->has_y ? cmd->y : motor_y->microsteps_to_mm(motor_y->getPosition()));
 
-                // Execute movements
+                // Execute XY movements
                 if (cmd->has_x) {
                     uint32_t steps = static_cast<uint32_t>(std::abs(motor_x->getPosition() - motor_x->getTargetPosition()));
                     if (steps > 0) motor_x->stepMultipleToTarget(steps);
@@ -342,10 +345,18 @@ static bool execute_gcode_command(execution_sub_fsm_t* fsm, const gcode_command_
                     uint32_t steps = static_cast<uint32_t>(std::abs(motor_y->getPosition() - motor_y->getTargetPosition()));
                     if (steps > 0) motor_y->stepMultipleToTarget(steps);
                 }
-                if (cmd->has_z) {
-                    uint32_t steps = static_cast<uint32_t>(std::abs(motor_z->getPosition() - motor_z->getTargetPosition()));
-                    if (steps > 0) motor_z->stepMultipleToTarget(steps);
-                }
+            }
+
+            // Step 3: If Z coordinate specified, move to soldering height
+            // (Z coordinate in GCode indicates this is a soldering point)
+            if (cmd->has_z) {
+                ESP_LOGI(TAG, "Moving Z to soldering height: %ld steps", fsm->config.soldering_z_height);
+                motor_z->setTargetPosition(fsm->config.soldering_z_height);
+                uint32_t z_steps = static_cast<uint32_t>(std::abs(motor_z->getPosition() - fsm->config.soldering_z_height));
+                if (z_steps > 0) motor_z->stepMultipleToTarget(z_steps);
+
+                // Add small delay at soldering position
+                vTaskDelay(pdMS_TO_TICKS(100));
             }
             break;
         }
@@ -384,11 +395,23 @@ static bool execute_gcode_command(execution_sub_fsm_t* fsm, const gcode_command_
 
         case GCODE_CMD_FEED_SOLDER: {
             // Custom - Feed solder
-            ESP_LOGI(TAG, "Feeding solder");
-            // Feed some solder wire
-            motor_s->setTargetPosition(motor_s->getPosition() + 300);
-            motor_s->stepMultipleToTarget(300);
-            vTaskDelay(pdMS_TO_TICKS(1000));  // Dwell for solder
+            ESP_LOGI(TAG, "Feeding solder (amount: %d)", cmd->s);
+
+            // Z should already be at soldering height from previous move command
+            // Feed solder wire
+            int32_t feed_amount = cmd->has_s ? cmd->s : 300;  // Use specified amount or default
+            motor_s->setTargetPosition(motor_s->getPosition() + feed_amount);
+            motor_s->stepMultipleToTarget(feed_amount);
+
+            // Dwell for solder to flow
+            vTaskDelay(pdMS_TO_TICKS(1000));
+
+            // Move Z back to safe height after soldering
+            ESP_LOGI(TAG, "Moving Z back to safe height: %ld steps", fsm->config.safe_z_height);
+            motor_z->setTargetPosition(fsm->config.safe_z_height);
+            uint32_t z_steps = static_cast<uint32_t>(std::abs(motor_z->getPosition() - fsm->config.safe_z_height));
+            if (z_steps > 0) motor_z->stepMultipleToTarget(z_steps);
+
             break;
         }
 

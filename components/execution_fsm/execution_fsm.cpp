@@ -345,18 +345,21 @@ static bool execute_gcode_command(execution_sub_fsm_t* fsm, const gcode_command_
                     uint32_t steps = static_cast<uint32_t>(std::abs(motor_y->getPosition() - motor_y->getTargetPosition()));
                     if (steps > 0) motor_y->stepMultipleToTarget(steps);
                 }
-            }
 
-            // Step 3: If Z coordinate specified, move to soldering height
-            // (Z coordinate in GCode indicates this is a soldering point)
-            if (cmd->has_z) {
-                ESP_LOGI(TAG, "Moving Z to soldering height: %ld steps", fsm->config.soldering_z_height);
+                // Step 3: After reaching XY position, lower Z to soldering height
+                // This prepares for the next solder feed command (S command)
+                ESP_LOGI(TAG, "Lowering Z to soldering height: %ld steps (%.2f mm)",
+                         fsm->config.soldering_z_height,
+                         motor_z->microsteps_to_mm(fsm->config.soldering_z_height));
                 motor_z->setTargetPosition(fsm->config.soldering_z_height);
-                uint32_t z_steps = static_cast<uint32_t>(std::abs(motor_z->getPosition() - fsm->config.soldering_z_height));
-                if (z_steps > 0) motor_z->stepMultipleToTarget(z_steps);
+                uint32_t z_steps_down = static_cast<uint32_t>(std::abs(motor_z->getPosition() - fsm->config.soldering_z_height));
+                if (z_steps_down > 0) {
+                    motor_z->stepMultipleToTarget(z_steps_down);
+                }
 
-                // Add small delay at soldering position
-                vTaskDelay(pdMS_TO_TICKS(100));
+                // Wait for Z axis to stabilize at soldering position
+                vTaskDelay(pdMS_TO_TICKS(200));
+                ESP_LOGI(TAG, "Z-axis at soldering position - ready for soldering");
             }
             break;
         }

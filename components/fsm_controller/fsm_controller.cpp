@@ -570,3 +570,14 @@ void fsm_execution_context_init(fsm_execution_context_t* context) {
     memset(context, 0, sizeof(fsm_execution_context_t));
     context->start_time_ms = (uint32_t)(esp_timer_get_time() / 1000);
 }
+
+/**
+ * @brief Get FSM configuration
+ */
+const fsm_config_t* fsm_controller_get_config(fsm_controller_handle_t handle) {
+    if (!handle) {
+        return NULL;
+    }
+
+    return &handle->config;
+}

@@ -307,6 +307,14 @@ fsm_execution_context_t* fsm_controller_get_execution_context(fsm_controller_han
  */
 void fsm_execution_context_init(fsm_execution_context_t* context);
 
+/**
+ * @brief Get FSM configuration
+ *
+ * @param handle FSM controller handle
+ * @return Pointer to configuration structure, or NULL on error
+ */
+const fsm_config_t* fsm_controller_get_config(fsm_controller_handle_t handle);
+
 #ifdef __cplusplus
 }
 #endif

@@ -40,13 +40,6 @@ StepperMotor* motor_s = nullptr;
 static soldering_iron_handle_t iron_handle = nullptr;
 static temperature_sensor_handle_t temp_sensor_handle = nullptr;
 
-// Temperature control settings (from FSM config)
-static float target_temperature = 350.0f;
-static float temperature_tolerance = 20.0f;  // Increased from 5.0 to 20.0 for easier heating target
-static float safe_temperature = 50.0f;
-static uint32_t heating_timeout_ms = 60000;
-static uint32_t cooldown_timeout_ms = 120000;
-
 // FSM controller handle
 static fsm_controller_handle_t fsm_handle = nullptr;
 
@@ -246,9 +239,17 @@ static bool on_enter_heating(void* user_data) {
         return false;
     }
 
+    // Get configuration from FSM
+    const fsm_config_t* config = fsm_controller_get_config(fsm_handle);
+    if (!config) {
+        ESP_LOGE(TAG, "Failed to get FSM configuration!");
+        fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_ERROR);
+        return false;
+    }
+
     // Set target temperature
-    soldering_iron_hal_set_target_temperature(iron_handle, target_temperature);
-    ESP_LOGI(TAG, "Target temperature: %.1f°C", target_temperature);
+    soldering_iron_hal_set_target_temperature(iron_handle, config->target_temperature);
+    ESP_LOGI(TAG, "Target temperature: %.1f°C", config->target_temperature);
 
     // Enable heater
     soldering_iron_hal_set_enable(iron_handle, true);
@@ -260,6 +261,10 @@ static bool on_enter_heating(void* user_data) {
 static bool on_execute_heating(void* user_data) {
     fsm_execution_context_t* ctx = fsm_controller_get_execution_context(fsm_handle);
     if (!ctx) return false;
+
+    // Get configuration from FSM
+    const fsm_config_t* config = fsm_controller_get_config(fsm_handle);
+    if (!config) return false;
 
     // MAX6675 requires minimum 220ms between readings for new conversion
     // Only read temperature every 250ms to ensure fresh data
@@ -297,7 +302,7 @@ static bool on_execute_heating(void* user_data) {
     }
 
     // Check for timeout
-    if (time_heating > heating_timeout_ms) {
+    if (time_heating > config->heating_timeout_ms) {
         ESP_LOGE(TAG, "Heating timeout!");
         soldering_iron_hal_set_enable(iron_handle, false);
         fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_ERROR);
@@ -305,8 +310,8 @@ static bool on_execute_heating(void* user_data) {
     }
 
     // Temperature reached and stable
-    if (temp_diff <= temperature_tolerance && !ctx->operation_complete) {
-        ESP_LOGI(TAG, "Target temperature reached: %.1f°C (±%.1f°C)", current_temp, temperature_tolerance);
+    if (temp_diff <= config->temperature_tolerance && !ctx->operation_complete) {
+        ESP_LOGI(TAG, "Target temperature reached: %.1f°C (±%.1f°C)", current_temp, config->temperature_tolerance);
         ctx->operation_complete = true;
         fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_SUCCESS);
     }
@@ -383,7 +388,7 @@ static bool on_execute_executing(void* user_data) {
 }
 
 static bool on_enter_normal_exit(void* user_data) {
-    ESP_LOGI(TAG, "FSM: NORMAL_EXIT - Cleanup and cooldown");
+    ESP_LOGI(TAG, "FSM: NORMAL_EXIT - Returning to home and starting cooldown");
 
     // Disable heater immediately
     if (iron_handle) {
@@ -391,7 +396,24 @@ static bool on_enter_normal_exit(void* user_data) {
         ESP_LOGI(TAG, "Heater disabled - Starting cooldown");
     }
 
-    // Motors already at home, disable them
+    // Return all axes to home position (0, 0, 0) before disabling motors
+    ESP_LOGI(TAG, "Returning to home position (0, 0, 0)");
+    motor_x->setTargetPosition(0);
+    motor_y->setTargetPosition(0);
+    motor_z->setTargetPosition(0);
+
+    // Move all axes to home
+    uint32_t x_steps = static_cast<uint32_t>(std::abs(motor_x->getPosition()));
+    uint32_t y_steps = static_cast<uint32_t>(std::abs(motor_y->getPosition()));
+    uint32_t z_steps = static_cast<uint32_t>(std::abs(motor_z->getPosition()));
+
+    if (x_steps > 0) motor_x->stepMultipleToTarget(x_steps);
+    if (y_steps > 0) motor_y->stepMultipleToTarget(y_steps);
+    if (z_steps > 0) motor_z->stepMultipleToTarget(z_steps);
+
+    ESP_LOGI(TAG, "Home position reached - Motors at (0, 0, 0)");
+
+    // Now disable motors after reaching home
     motor_x->setEnable(false);
     motor_y->setEnable(false);
     motor_z->setEnable(false);
@@ -409,6 +431,10 @@ static bool on_enter_normal_exit(void* user_data) {
 static bool on_execute_normal_exit(void* user_data) {
     fsm_execution_context_t* ctx = fsm_controller_get_execution_context(fsm_handle);
     if (!ctx) return false;
+
+    // Get configuration from FSM
+    const fsm_config_t* config = fsm_controller_get_config(fsm_handle);
+    if (!config) return false;
 
     // MAX6675 requires minimum 220ms between readings for new conversion
     // Only read temperature every 250ms to ensure fresh data
@@ -434,18 +460,18 @@ static bool on_execute_normal_exit(void* user_data) {
     // Log temperature every 5 seconds during cooldown
     if (time_cooldown % 5000 < 100) {
         ESP_LOGI(TAG, "Cooldown: Current=%.1f°C, Safe=%.1f°C, Time=%lus",
-                 current_temp, safe_temperature, time_cooldown / 1000);
+                 current_temp, config->safe_temperature, time_cooldown / 1000);
     }
 
-    // Check for timeout
-    if (time_cooldown > cooldown_timeout_ms) {
-        ESP_LOGW(TAG, "Cooldown timeout! Current temp: %.1f°C", current_temp);
+    // Check for timeout (10 minutes)
+    if (time_cooldown > config->cooldown_timeout_ms) {
+        ESP_LOGW(TAG, "Cooldown timeout (10 min)! Current temp: %.1f°C", current_temp);
         fsm_controller_post_event(fsm_handle, FSM_EVENT_COOLING_ERROR);
         return false;
     }
 
     // Check if cooled down to safe temperature
-    if (current_temp <= safe_temperature && !ctx->operation_complete) {
+    if (current_temp <= config->safe_temperature && !ctx->operation_complete) {
         ESP_LOGI(TAG, "Cooldown complete - System safe at %.1f°C", current_temp);
         ctx->operation_complete = true;
         fsm_controller_post_event(fsm_handle, FSM_EVENT_COOLDOWN_COMPLETE);
@@ -463,8 +489,8 @@ static void init_fsm(void) {
         .temperature_tolerance = 20.0f,
         .heating_timeout_ms = 60000,
         .calibration_timeout_ms = 30000,
-        .safe_temperature = 50.0f,
-        .cooldown_timeout_ms = 120000
+        .safe_temperature = 150.0f,  // Safe handling temperature
+        .cooldown_timeout_ms = 600000  // 10 minutes
     };
 
     fsm_handle = fsm_controller_init(&config);

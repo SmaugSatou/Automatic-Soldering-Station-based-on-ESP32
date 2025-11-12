@@ -198,8 +198,8 @@ static bool on_enter_executing(void* user_data) {
     motor_s->setEnable(true);
 
     execution_config_t exec_config = {
-        .safe_z_height = motor_z->mm_to_microsteps(160),       // 160mm in steps
-        .soldering_z_height = motor_z->mm_to_microsteps(180),  // 180mm in steps
+        .safe_z_height = motor_z->mm_to_microsteps(140),       // 140mm in steps
+        .soldering_z_height = motor_z->mm_to_microsteps(160),  // 160mm in steps
         .home_x = 0,
         .home_y = 0,
         .home_z = 0

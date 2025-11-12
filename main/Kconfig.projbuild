@@ -43,9 +43,9 @@ menu "Automatic Soldering Station Configuration"
 
         config MOTOR_X_DIR_PIN
             int "X-Axis Direction Pin"
-            default 18
+            default 12
             help
-                GPIO pin for X-axis stepper DIR signal (D18)
+                GPIO pin for X-axis stepper DIR signal (D12)
 
         config MOTOR_X_ENABLE_PIN
             int "X-Axis Enable Pin"
@@ -78,9 +78,9 @@ menu "Automatic Soldering Station Configuration"
 
         config MOTOR_Y_DIR_PIN
             int "Y-Axis Direction Pin"
-            default 5
+            default 13
             help
-                GPIO pin for Y-axis stepper DIR signal (D5)
+                GPIO pin for Y-axis stepper DIR signal (D13)
 
         config MOTOR_Y_ENABLE_PIN
             int "Y-Axis Enable Pin"
@@ -146,9 +146,9 @@ menu "Automatic Soldering Station Configuration"
     menu "Stepper Motor Pins - Solder Supply"
         config MOTOR_S_STEP_PIN
             int "Solder Supply Step Pin"
-            default 19
+            default 14
             help
-                GPIO pin for solder supply stepper STEP signal (D19 - Extruder)
+                GPIO pin for solder supply stepper STEP signal (D14 - Extruder)
 
         config MOTOR_S_DIR_PIN
             int "Solder Supply Direction Pin"
@@ -176,7 +176,7 @@ menu "Automatic Soldering Station Configuration"
     menu "Soldering Iron Configuration"
         config SOLDERING_IRON_PWM_PIN
             int "Soldering Iron PWM Pin"
-            default 26
+            default 27
             help
                 GPIO pin for soldering iron PWM control
 

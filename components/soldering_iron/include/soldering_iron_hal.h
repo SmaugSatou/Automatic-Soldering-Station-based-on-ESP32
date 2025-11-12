@@ -23,7 +23,7 @@ extern "C" {
  * @brief Soldering iron configuration structure
  */
 typedef struct {
-    uint8_t heater_pwm_pin;
+    gpio_num_t heater_pwm_pin;
     ledc_timer_t pwm_timer;
     ledc_channel_t pwm_channel;
     uint32_t pwm_frequency;

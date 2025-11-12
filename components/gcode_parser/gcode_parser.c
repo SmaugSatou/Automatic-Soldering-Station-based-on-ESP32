@@ -109,25 +109,25 @@ bool gcode_parser_parse_line(gcode_parser_handle_t handle, const char* line, gco
         return false;
     }
 
-    // Parse command type (G or M code)
+    // Parse command type (only G0 and S commands are supported)
     if (toupper(*line) == 'G') {
         line++;
         int g_code = atoi(line);
 
         switch (g_code) {
             case 0:
-            case 1:
+                // G0 - Rapid positioning (move)
                 cmd->type = GCODE_CMD_MOVE;
                 break;
+            case 1:
             case 4:
-                cmd->type = GCODE_CMD_DWELL;
-                break;
             case 28:
-                cmd->type = GCODE_CMD_HOME;
-                break;
+                // G1 (linear move), G4 (dwell), G28 (home) are ignored
+                // These operations are handled by the system
+                ESP_LOGD(TAG, "Ignoring G-code G%d (handled by system)", g_code);
+                return false;  // Skip this line
             default:
-                ESP_LOGW(TAG, "Unknown G-code: G%d", g_code);
-                cmd->type = GCODE_CMD_UNKNOWN;
+                ESP_LOGW(TAG, "Unsupported G-code: G%d (only G0 is supported)", g_code);
                 return false;
         }
 
@@ -138,19 +138,27 @@ bool gcode_parser_parse_line(gcode_parser_handle_t handle, const char* line, gco
         line++;
         int m_code = atoi(line);
 
-        switch (m_code) {
-            case 104:
-            case 109:
-                cmd->type = GCODE_CMD_SET_TEMPERATURE;
-                break;
-            default:
-                ESP_LOGW(TAG, "Unknown M-code: M%d", m_code);
-                cmd->type = GCODE_CMD_UNKNOWN;
-                return false;
-        }
+        // All M-codes are ignored (system handles these)
+        ESP_LOGD(TAG, "Ignoring M-code M%d (handled by system)", m_code);
+        return false;  // Skip this line
+    }
+    else if (toupper(*line) == 'S') {
+        // Custom command: S<amount> - Feed solder
+        // Example: S75 means feed 75 units of solder
+        cmd->type = GCODE_CMD_FEED_SOLDER;
+        line++;
 
-        // Skip the number
-        while (isdigit((unsigned char)*line)) line++;
+        // Parse solder amount
+        if (isdigit((unsigned char)*line)) {
+            cmd->has_s = true;
+            cmd->s = (uint32_t)atoi(line);
+            // Skip the number
+            while (isdigit((unsigned char)*line)) line++;
+        } else {
+            // Default solder amount if no number provided
+            cmd->has_s = true;
+            cmd->s = 100;  // Default solder feed amount
+        }
     }
     else {
         ESP_LOGW(TAG, "Invalid command format: %s", line);
@@ -220,43 +228,33 @@ bool gcode_parser_validate_command(gcode_parser_handle_t handle, const gcode_com
         return false;
     }
 
-    // Basic validation
+    // Basic validation - only G0 (move) and S (feed solder) are supported
     switch (cmd->type) {
         case GCODE_CMD_MOVE:
-            // At least one axis should be specified
+            // At least one axis should be specified for G0
             if (!cmd->has_x && !cmd->has_y && !cmd->has_z) {
-                ESP_LOGW(TAG, "Move command without coordinates");
+                ESP_LOGW(TAG, "G0 move command without coordinates");
                 return false;
             }
             break;
 
-        case GCODE_CMD_SET_TEMPERATURE:
-            // Temperature should be specified
-            if (!cmd->has_s) {
-                ESP_LOGW(TAG, "Temperature command without S parameter");
-                return false;
-            }
-            // Reasonable temperature range (50-450°C)
-            if (cmd->s < 50 || cmd->s > 450) {
-                ESP_LOGW(TAG, "Temperature out of range: %d", cmd->s);
-                return false;
-            }
-            break;
-
-        case GCODE_CMD_DWELL:
-            // Dwell time should be specified
-            if (!cmd->has_t) {
-                ESP_LOGW(TAG, "Dwell command without time parameter");
+        case GCODE_CMD_FEED_SOLDER:
+            // Solder feed amount should be specified
+            if (!cmd->has_s || cmd->s == 0) {
+                ESP_LOGW(TAG, "Feed solder command without valid amount");
                 return false;
             }
             break;
 
         case GCODE_CMD_HOME:
-        case GCODE_CMD_FEED_SOLDER:
-            // No validation needed
-            break;
+        case GCODE_CMD_DWELL:
+        case GCODE_CMD_SET_TEMPERATURE:
+            // These commands should not reach here (ignored during parsing)
+            ESP_LOGW(TAG, "Command type %d should have been filtered during parsing", cmd->type);
+            return false;
 
         default:
+            ESP_LOGW(TAG, "Invalid command type: %d", cmd->type);
             return false;
     }
 

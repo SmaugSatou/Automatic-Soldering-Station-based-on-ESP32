@@ -238,6 +238,13 @@ bool fsm_controller_start(fsm_controller_handle_t handle) {
 
     handle->is_running = true;
     ESP_LOGI(TAG, "FSM Controller started");
+
+    // Post INIT_DONE event to transition from INIT to IDLE state
+    if (!fsm_controller_post_event(handle, FSM_EVENT_INIT_DONE)) {
+        ESP_LOGW(TAG, "Failed to post INIT_DONE event");
+        return false;
+    }
+
     return true;
 }
 

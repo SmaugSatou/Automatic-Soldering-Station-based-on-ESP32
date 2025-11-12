@@ -32,19 +32,6 @@ let controlStatus;
 let parsedGCode = null;
 let originalDrillContent = null;
 
-// Soldering parameters (configurable)
-const SOLDERING_CONFIG = {
-    temperature: 350,           // Soldering temperature in Celsius
-    safeHeight: 10.0,          // Safe Z height for rapid moves (mm)
-    approachHeight: 0.5,       // Height to slow down approach (mm)
-    contactHeight: 0.1,        // Height for soldering contact (mm)
-    preheatTime: 1000,         // Pad preheat time (ms)
-    solderFeedAmount: 75,      // Solder wire feed steps
-    flowTime: 800,             // Time to let solder flow (ms)
-    approachFeedRate: 100,     // Feed rate for approach (mm/min)
-    contactFeedRate: 50        // Feed rate for lowering to contact (mm/min)
-};
-
 /**
  * Initialize the application
  */
@@ -196,19 +183,26 @@ async function handleSendToController() {
     sendBtn.disabled = true;
 
     try {
-        // Send to server
+        // Strip comment lines and empty lines for ESP32
+        const cleanGCode = parsedGCode
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0 && !line.startsWith(';'))
+            .join('\n');cle
+        
+        // Send clean G-Code to server
         const response = await fetch('/api/gcode/upload', {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain',
             },
-            body: parsedGCode
+            body: cleanGCode
         });
 
         if (response.ok) {
             const result = await response.json();
-            const lines = parsedGCode.split('\n').filter(l => l.trim() && !l.trim().startsWith(';'));
-            sendStatus.textContent = `Success: G-Code uploaded to controller (${lines.length} commands)`;
+            const commandCount = cleanGCode.split('\n').length;
+            sendStatus.textContent = `Success: G-Code uploaded to controller (${commandCount} commands)`;
             sendStatus.className = 'upload-status success';
             
             // Enable start button
@@ -453,10 +447,7 @@ function readFileContent(file) {
 function parseDrillToGCode(drillContent) {
     const lines = drillContent.split('\n');
     let gcode = [];
-    let currentTool = null;
-    let toolSizes = {};
     let drillPoints = [];
-    let inHeader = true;
     let isMetric = true;
     
     // Add header comments
@@ -482,69 +473,22 @@ function parseDrillToGCode(drillContent) {
             continue;
         }
         
-        // Parse tool definitions (TxxCxx.xxx)
-        const toolMatch = line.match(/^T(\d+)C([\d.]+)/);
-        if (toolMatch) {
-            const toolNum = toolMatch[1];
-            const toolSize = parseFloat(toolMatch[2]);
-            toolSizes[toolNum] = toolSize;
-            gcode.push(`; Tool T${toolNum}: ${toolSize}mm diameter`);
-            continue;
-        }
-        
-        // End of header
-        if (line === '%' || line === 'G05' || line === 'G90') {
-            if (inHeader) {
-                inHeader = false;
-                gcode.push('');
-                gcode.push('; --- End of tool definitions ---');
-                gcode.push('');
-            }
-            continue;
-        }
-        
-        // Tool change (Txx alone on line)
-        const toolChangeMatch = line.match(/^T(\d+)$/);
-        if (toolChangeMatch) {
-            currentTool = toolChangeMatch[1];
-            const toolSize = toolSizes[currentTool] || 'unknown';
-            gcode.push('');
-            gcode.push(`; === Tool Change: T${currentTool} (${toolSize}mm) ===`);
-            continue;
-        }
-        
-        // Parse coordinates (X, Y with optional G85 for slots)
+        // Parse coordinates (X, Y) - ignore tool information
         const coordMatch = line.match(/X([-\d.]+)Y([-\d.]+)/);
-        if (coordMatch && currentTool) {
+        if (coordMatch) {
             let x = parseFloat(coordMatch[1]);
             let y = parseFloat(coordMatch[2]);
             
-            // Convert to mm if needed (though Excellon usually in mm already)
+            // Convert to mm if needed
             if (!isMetric) {
                 x *= 25.4;  // inches to mm
                 y *= 25.4;
             }
             
-            // Check for slot (G85)
-            const isSlot = line.includes('G85');
-            
-            drillPoints.push({
-                x: x,
-                y: y,
-                tool: currentTool,
-                size: toolSizes[currentTool],
-                isSlot: isSlot
-            });
+            drillPoints.push({ x: x, y: y });
         }
     }
-    
-    // Generate G-Code for soldering operations
-    gcode.push('');
-    gcode.push('; === Initialization ===');
-    gcode.push(`M109 S${SOLDERING_CONFIG.temperature}  ; Set temperature and wait`);
-    gcode.push('G28                    ; Home all axes');
-    gcode.push('');
-    
+
     // Process each drill point as a solder point
     gcode.push(`; === Soldering Operations (${drillPoints.length} points) ===`);
     
@@ -552,35 +496,16 @@ function parseDrillToGCode(drillContent) {
         const point = drillPoints[i];
         
         gcode.push('');
-        gcode.push(`; Point ${i + 1}/${drillPoints.length}: Tool T${point.tool} (${point.size}mm) at X${point.x.toFixed(2)} Y${point.y.toFixed(2)}`);
+        gcode.push(`; Point ${i + 1}/${drillPoints.length} at X${point.x.toFixed(2)} Y${point.y.toFixed(2)}`);
         
         // Move to position with safe height
-        gcode.push(`G0 X${point.x.toFixed(3)} Y${point.y.toFixed(3)} Z${SOLDERING_CONFIG.safeHeight.toFixed(1)}`);
-        
-        // Lower to approach height
-        gcode.push(`G0 Z${SOLDERING_CONFIG.approachHeight} F${SOLDERING_CONFIG.approachFeedRate}`);
-        
-        // Lower slowly to contact height
-        gcode.push(`G1 Z${SOLDERING_CONFIG.contactHeight} F${SOLDERING_CONFIG.contactFeedRate}`);
-        
-        // Preheat pad
-        gcode.push(`G4 P${SOLDERING_CONFIG.preheatTime}  ; Preheat pad`);
+        gcode.push(`G0 X${point.x.toFixed(3)} Y${point.y.toFixed(3)}`);
         
         // Feed solder
-        gcode.push(`S${SOLDERING_CONFIG.solderFeedAmount}              ; Feed solder`);
-        
-        // Let solder flow
-        gcode.push(`G4 P${SOLDERING_CONFIG.flowTime}   ; Let solder flow`);
-        
-        // Retract to safe height
-        gcode.push(`G0 Z${SOLDERING_CONFIG.safeHeight.toFixed(1)}     ; Retract`);
+        gcode.push('; Solder the point');
+        gcode.push(`S75`);
     }
     
-    // Cleanup
-    gcode.push('');
-    gcode.push('; === Cleanup ===');
-    gcode.push('G28                    ; Return home');
-    gcode.push('M104 S0                ; Turn off heater');
     gcode.push('');
     gcode.push('; === End of Program ===');
     

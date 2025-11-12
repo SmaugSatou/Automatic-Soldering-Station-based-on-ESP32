@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>  // For size_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,6 +69,8 @@ typedef struct {
     int solder_points_completed;
     bool operation_in_progress;
     execution_config_t config;      // Configuration parameters
+    void* gcode_parser_handle;      // GCode parser handle (opaque)
+    bool use_gcode;                 // True if executing from GCode, false for point array
 } execution_sub_fsm_t;
 
 void exec_sub_fsm_init(execution_sub_fsm_t* fsm, const execution_config_t* config);
@@ -76,6 +79,11 @@ exec_sub_state_t exec_sub_fsm_get_state(const execution_sub_fsm_t* fsm);
 int exec_sub_fsm_get_completed_count(const execution_sub_fsm_t* fsm);
 const char* exec_sub_fsm_get_state_name(exec_sub_state_t state);
 execution_config_t exec_sub_fsm_get_default_config(void);
+
+// GCode execution functions
+bool exec_sub_fsm_load_gcode_from_ram(execution_sub_fsm_t* fsm, const char* gcode_buffer, size_t buffer_size);
+void exec_sub_fsm_process_gcode(execution_sub_fsm_t* fsm);
+void exec_sub_fsm_cleanup_gcode(execution_sub_fsm_t* fsm);
 
 #ifdef __cplusplus
 }

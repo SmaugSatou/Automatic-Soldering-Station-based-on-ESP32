@@ -1,7 +1,7 @@
 /**
  * @file app.js
  * @brief Main application logic for web interface
- * 
+ *
  * Handles G-Code upload, validation, visualization, WebSocket communication,
  * and UI interactions for soldering station control.
  */
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     uploadBtn = document.getElementById('upload-btn');
     fileNameDisplay = document.getElementById('file-name');
     uploadStatus = document.getElementById('upload-status');
-    
+
     // Preview elements
     previewSection = document.getElementById('preview-section');
     drillContentDisplay = document.getElementById('drill-content');
@@ -49,45 +49,45 @@ document.addEventListener('DOMContentLoaded', function() {
     sendBtn = document.getElementById('send-btn');
     cancelBtn = document.getElementById('cancel-btn');
     sendStatus = document.getElementById('send-status');
-    
+
     // Control elements
     startBtn = document.getElementById('start-btn');
     pauseBtn = document.getElementById('pause-btn');
     resumeBtn = document.getElementById('resume-btn');
     stopBtn = document.getElementById('stop-btn');
     controlStatus = document.getElementById('control-status');
-    
+
     uploadBtn.disabled = true;
 
     // Add event listeners
     if (fileInput) {
         fileInput.addEventListener('change', handleFileSelect);
     }
-    
+
     if (uploadBtn) {
         uploadBtn.addEventListener('click', handleFileParse);
     }
-    
+
     if (sendBtn) {
         sendBtn.addEventListener('click', handleSendToController);
     }
-    
+
     if (cancelBtn) {
         cancelBtn.addEventListener('click', handleCancel);
     }
-    
+
     if (startBtn) {
         startBtn.addEventListener('click', handleStart);
     }
-    
+
     if (pauseBtn) {
         pauseBtn.addEventListener('click', handlePause);
     }
-    
+
     if (resumeBtn) {
         resumeBtn.addEventListener('click', handleResume);
     }
-    
+
     if (stopBtn) {
         stopBtn.addEventListener('click', handleStop);
     }
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function handleFileSelect(event) {
     const file = event.target.files[0];
-    
+
     if (!file) {
         selectedFile = null;
         uploadBtn.disabled = true;
@@ -144,25 +144,25 @@ async function handleFileParse() {
         // Read file content
         const fileContent = await readFileContent(selectedFile);
         originalDrillContent = fileContent;
-        
+
         // Parse drill file to G-Code
         uploadStatus.textContent = 'Converting to G-Code...';
         const gcode = parseDrillToGCode(fileContent);
-        
+
         if (!gcode) {
             throw new Error('Failed to parse drill file');
         }
-        
+
         parsedGCode = gcode;
-        
+
         // Display G-Code statistics
         const lines = gcode.split('\n').filter(l => l.trim() && !l.trim().startsWith(';'));
         uploadStatus.textContent = `Successfully parsed! Generated ${lines.length} G-Code commands.`;
         uploadStatus.className = 'upload-status success';
-        
+
         // Show preview
         showPreview(fileContent, gcode);
-        
+
     } catch (error) {
         uploadStatus.textContent = `Error: ${error.message}`;
         uploadStatus.className = 'upload-status error';
@@ -188,7 +188,7 @@ async function handleSendToController() {
             .split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0 && !line.startsWith(';'))
-            .join('\n');cle
+            .join('\n');
         
         // Send clean G-Code to server
         const response = await fetch('/api/gcode/upload', {
@@ -204,17 +204,17 @@ async function handleSendToController() {
             const commandCount = cleanGCode.split('\n').length;
             sendStatus.textContent = `Success: G-Code uploaded to controller (${commandCount} commands)`;
             sendStatus.className = 'upload-status success';
-            
+
             // Enable start button
             if (startBtn) {
                 startBtn.disabled = false;
             }
-            
+
             // Reset after successful upload
             setTimeout(() => {
                 resetUploadForm();
             }, 3000);
-            
+
         } else {
             const error = await response.json();
             sendStatus.textContent = `Error: ${error.message || 'Upload failed'}`;
@@ -234,7 +234,7 @@ async function handleSendToController() {
 async function handleStart() {
     controlStatus.textContent = 'Starting execution...';
     controlStatus.className = 'upload-status info';
-    
+
     try {
         const response = await fetch('/api/gcode/start', {
             method: 'POST',
@@ -247,7 +247,7 @@ async function handleStart() {
             const result = await response.json();
             controlStatus.textContent = 'Execution started';
             controlStatus.className = 'upload-status success';
-            
+
             // Update button states
             startBtn.disabled = true;
             pauseBtn.disabled = false;
@@ -270,7 +270,7 @@ async function handleStart() {
 async function handlePause() {
     controlStatus.textContent = 'Pausing execution...';
     controlStatus.className = 'upload-status info';
-    
+
     try {
         const response = await fetch('/api/gcode/pause', {
             method: 'POST',
@@ -283,7 +283,7 @@ async function handlePause() {
             const result = await response.json();
             controlStatus.textContent = 'Execution paused';
             controlStatus.className = 'upload-status success';
-            
+
             // Update button states
             pauseBtn.disabled = true;
             resumeBtn.disabled = false;
@@ -304,7 +304,7 @@ async function handlePause() {
 async function handleResume() {
     controlStatus.textContent = 'Resuming execution...';
     controlStatus.className = 'upload-status info';
-    
+
     try {
         const response = await fetch('/api/gcode/resume', {
             method: 'POST',
@@ -317,7 +317,7 @@ async function handleResume() {
             const result = await response.json();
             controlStatus.textContent = 'Execution resumed';
             controlStatus.className = 'upload-status success';
-            
+
             // Update button states
             pauseBtn.disabled = false;
             resumeBtn.disabled = true;
@@ -338,7 +338,7 @@ async function handleResume() {
 async function handleStop() {
     controlStatus.textContent = 'Stopping execution...';
     controlStatus.className = 'upload-status info';
-    
+
     try {
         const response = await fetch('/api/gcode/stop', {
             method: 'POST',
@@ -351,13 +351,13 @@ async function handleStop() {
             const result = await response.json();
             controlStatus.textContent = 'Execution stopped';
             controlStatus.className = 'upload-status success';
-            
+
             // Reset button states
             startBtn.disabled = false;
             pauseBtn.disabled = true;
             resumeBtn.disabled = true;
             stopBtn.disabled = true;
-            
+
             setTimeout(() => {
                 controlStatus.textContent = '';
             }, 3000);
@@ -389,7 +389,7 @@ function showPreview(drillContent, gcode) {
     sendStatus.textContent = '';
     sendStatus.className = 'upload-status';
     sendBtn.disabled = false;
-    
+
     // Scroll to preview
     previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -415,7 +415,7 @@ function resetUploadForm() {
     uploadStatus.textContent = '';
     uploadStatus.className = 'upload-status';
     hidePreview();
-    
+
     // Reset control buttons
     if (startBtn) startBtn.disabled = true;
     if (pauseBtn) pauseBtn.disabled = true;
@@ -449,20 +449,20 @@ function parseDrillToGCode(drillContent) {
     let gcode = [];
     let drillPoints = [];
     let isMetric = true;
-    
+
     // Add header comments
     gcode.push('; G-Code generated from Excellon drill file');
     gcode.push('; Generated: ' + new Date().toISOString());
     gcode.push('; Soldering Station Automatic Controller');
     gcode.push('');
-    
+
     // Parse drill file
     for (let line of lines) {
         line = line.trim();
-        
+
         // Skip empty lines and comments
         if (!line || line.startsWith(';')) continue;
-        
+
         // Check for metric/inch mode
         if (line.includes('METRIC')) {
             isMetric = true;
@@ -472,43 +472,42 @@ function parseDrillToGCode(drillContent) {
             isMetric = false;
             continue;
         }
-        
+
         // Parse coordinates (X, Y) - ignore tool information
         const coordMatch = line.match(/X([-\d.]+)Y([-\d.]+)/);
         if (coordMatch) {
             let x = parseFloat(coordMatch[1]);
             let y = parseFloat(coordMatch[2]);
-            
+
             // Convert to mm if needed
             if (!isMetric) {
                 x *= 25.4;  // inches to mm
                 y *= 25.4;
             }
-            
+
             drillPoints.push({ x: x, y: y });
         }
     }
 
     // Process each drill point as a solder point
     gcode.push(`; === Soldering Operations (${drillPoints.length} points) ===`);
-    
+
     for (let i = 0; i < drillPoints.length; i++) {
         const point = drillPoints[i];
-        
+
         gcode.push('');
         gcode.push(`; Point ${i + 1}/${drillPoints.length} at X${point.x.toFixed(2)} Y${point.y.toFixed(2)}`);
-        
+
         // Move to position with safe height
         gcode.push(`G0 X${point.x.toFixed(3)} Y${point.y.toFixed(3)}`);
-        
+
         // Feed solder
         gcode.push('; Solder the point');
         gcode.push(`S75`);
     }
-    
+
     gcode.push('');
     gcode.push('; === End of Program ===');
-    
+
     return gcode.join('\n');
 }
-

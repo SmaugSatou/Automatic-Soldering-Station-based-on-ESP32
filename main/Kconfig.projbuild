@@ -54,7 +54,7 @@ menu "Automatic Soldering Station Configuration"
                 GPIO pin for X-axis stepper ENABLE signal (D25)
         config MOTOR_X_MIN_ENDPOINT_PIN
             int "X-Axis Minimum Endstop Pin"
-            default 12
+            default 34
             help
                 GPIO pin for X-axis minimum endstop switch (D12)
         config MOTOR_X_MM_IN_MICROSTEP_X1000
@@ -90,7 +90,7 @@ menu "Automatic Soldering Station Configuration"
 
         config MOTOR_Y_MIN_ENDPOINT_PIN
             int "Y-Axis Minimum Endstop Pin"
-            default 13
+            default 35
             help
                 GPIO pin for Y-axis minimum endstop switch (D13)
         config MOTOR_Y_MM_IN_MICROSTEP_X1000
@@ -125,9 +125,9 @@ menu "Automatic Soldering Station Configuration"
                 GPIO pin for Z-axis stepper ENABLE signal (D32)
         config MOTOR_Z_MIN_ENDPOINT_PIN
             int "Z-Axis Minimum Endstop Pin"
-            default 14
+            default 39
             help
-                GPIO pin for Z-axis minimum endstop switch (D14)
+                GPIO pin for Z-axis minimum endstop switch (D39)
         config MOTOR_Z_MM_IN_MICROSTEP_X1000
             int "Millimeters per Microstep (x1000)"
             default 10

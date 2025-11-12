@@ -13,6 +13,7 @@ idf_component_register(
     # Ми повідомляємо системі збірки, що цей компонент
     # потребує інші системні бібліотеки
     REQUIRES
+          esp_driver_gpio
           esp_driver_spi
           log       # Для HAL (esp_log.h)
           esp_common    # Для HAL (esp_err_t)

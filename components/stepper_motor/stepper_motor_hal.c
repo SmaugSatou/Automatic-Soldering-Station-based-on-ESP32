@@ -81,12 +81,18 @@ stepper_motor_handle_t stepper_motor_hal_init(const stepper_motor_config_t* conf
 
     // Initialize endpoint pin as input with pull-up
     if (config->endpoint_pin != GPIO_NUM_NC) {
+        // Check if pin is input-only (GPIO 34-39 on ESP32)
+        bool is_input_only = (config->endpoint_pin >= 34 && config->endpoint_pin <= 39);
+        
+        // ADDED: Reset pin to digital GPIO mode (disable ADC)
+        gpio_reset_pin(config->endpoint_pin);
+        
         gpio_config_t endpoint_conf = {
             .intr_type = GPIO_INTR_DISABLE,
             .mode = GPIO_MODE_INPUT,
             .pin_bit_mask = (1ULL << config->endpoint_pin),
             .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .pull_up_en = GPIO_PULLUP_ENABLE
+            .pull_up_en = is_input_only ? GPIO_PULLUP_DISABLE : GPIO_PULLUP_ENABLE
         };
 
         if (gpio_config(&endpoint_conf) != ESP_OK) {
@@ -94,14 +100,15 @@ stepper_motor_handle_t stepper_motor_hal_init(const stepper_motor_config_t* conf
             free(handle);
             return NULL;
         }
-        ESP_LOGI(TAG, "  ENDPOINT: GPIO %d", config->endpoint_pin);
-    }
-
-
-    if (gpio_config(&io_conf) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to configure GPIO");
-        free(handle);
-        return NULL;
+        
+        // ADDED: Test read the pin immediately after configuration
+        int level = gpio_get_level(config->endpoint_pin);
+        ESP_LOGI(TAG, "  ENDPOINT: GPIO %d (input-only, external pull-up) - Initial level: %d", 
+                 config->endpoint_pin, level);
+        
+        if (is_input_only) {
+            ESP_LOGI(TAG, "  Note: GPIO 34-39 are ADC pins. If not working, check ADC is disabled.");
+        }
     }
 
     ESP_LOGI(TAG, "GPIO pins configured successfully");
@@ -176,7 +183,6 @@ void stepper_motor_hal_step(stepper_motor_handle_t handle, uint32_t signal_width
     gpio_set_level(handle->config.step_pin, 1);
     esp_rom_delay_us(signal_width_us);
     gpio_set_level(handle->config.step_pin, 0);
-    // esp_rom_delay_us(signal_width_us);
 }
 
 void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t steps) {
@@ -220,7 +226,7 @@ void stepper_motor_hal_step_multiple(stepper_motor_handle_t handle, uint32_t ste
         // Log progress every 100 steps
     }
     
-    ESP_LOGI(TAG, "Completed %lu steps", steps);
+    // ESP_LOGI(TAG, "Completed %lu steps", steps);
 }
 
 stepper_direction_t stepper_motor_hal_get_direction(stepper_motor_handle_t handle) {

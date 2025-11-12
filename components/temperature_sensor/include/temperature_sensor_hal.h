@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "driver/gpio.h"
 #include "driver/spi_master.h" // Потрібен для SPI
 #include "esp_err.h"           // Потрібен для esp_err_t
 

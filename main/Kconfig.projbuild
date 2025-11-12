@@ -161,6 +161,16 @@ menu "Automatic Soldering Station Configuration"
             default 33
             help
                 GPIO pin for solder supply stepper ENABLE signal (D33 - Extruder)
+        config MOTOR_S_MM_IN_MICROSTEP_X1000
+            int "Millimeters per Microstep (x1000)"
+            default 40
+            help
+                Number of millimeters the S-axis moves per microstep (in x1000)
+        config MOTOR_S_MICROSTEPS_IN_MM
+            int "Microsteps per Millimeter"
+            default 25
+            help
+                Number of microsteps required to move 1 millimeter
     endmenu
 
     menu "Soldering Iron Configuration"

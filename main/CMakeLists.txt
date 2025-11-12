@@ -10,4 +10,6 @@ idf_component_register(
         fsm_controller
         execution_fsm
         esp_timer
+        soldering_iron
+        temperature_sensor
 )

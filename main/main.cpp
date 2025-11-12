@@ -116,7 +116,7 @@ static void init_motors() {
         .enable_pin = static_cast<gpio_num_t>(CONFIG_MOTOR_S_ENABLE_PIN),
         .endpoint_pin = GPIO_NUM_NC  // No endpoint switch for solder supply
     };
-    motor_s = new StepperMotor(config_s, 80); // Arbitrary steps/mm for solder feed
+    motor_s = new StepperMotor(config_s, CONFIG_MOTOR_S_MICROSTEPS_IN_MM, STEPPER_DIR_CLOCKWISE);
     if (!motor_s->isInitialized()) {
         ESP_LOGE(TAG, "Failed to initialize solder supply motor");
         return;
@@ -193,6 +193,7 @@ static bool on_enter_executing(void* user_data) {
     motor_x->setEnable(true);
     motor_y->setEnable(true);
     motor_z->setEnable(true);
+    motor_s->setEnable(true);
 
     execution_config_t exec_config = {
         .safe_z_height = motor_z->mm_to_microsteps(160),       // 160mm in steps

@@ -337,6 +337,7 @@ static esp_err_t motor_status_handler(httpd_req_t *req) {
 static esp_err_t gcode_start_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "G-Code start request received");
 
+    web_server_handle_t server_handle = (web_server_handle_t)req->user_ctx;
     bool event_posted = false;
     if (server_handle && server_handle->fsm_handle) {
         if (fsm_controller_post_event(server_handle->fsm_handle, FSM_EVENT_TASK_APPROVED)) {

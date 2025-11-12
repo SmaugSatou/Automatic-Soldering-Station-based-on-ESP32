@@ -202,16 +202,6 @@ void StepperMotor::resetPosition() {
     ESP_LOGI(TAG, "Position reset to 0");
 }
 
-int32_t StepperMotor::mm_to_steps_256(int64_t mm) {
-    // Convert mm to steps with 256 fractional precision
-    return (int32_t)(mm * steps_per_mm);  // Remove the * 256 multiplication
-}
-
-int32_t StepperMotor::steps_256_to_mm(int32_t steps) {
-    // Convert steps/256 back to mm
-    return (int32_t)(steps / steps_per_mm);  // Remove the / 256 division
-}
-
 bool StepperMotor::isEndpointReached() const {
     if (handle_ == nullptr) {
         ESP_LOGW(TAG, "Motor not initialized");
@@ -246,4 +236,12 @@ void StepperMotor::calibrate() {
     setEnable(ennable_state);
 
     ESP_LOGI(TAG, "Motor calibrated to endpoint");
+}
+
+int32_t StepperMotor::microsteps_to_mm(int32_t microsteps) {
+    return (int32_t)(microsteps / steps_per_mm);
+}
+
+int32_t StepperMotor::mm_to_microsteps(int32_t mm) {
+    return (int32_t)(mm * steps_per_mm);
 }

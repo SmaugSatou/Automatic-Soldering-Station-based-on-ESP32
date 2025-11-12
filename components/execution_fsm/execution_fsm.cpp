@@ -102,6 +102,12 @@ void exec_sub_fsm_process(execution_sub_fsm_t* fsm, const solder_point_t* points
             bool y_reached = (motor_y->getPosition() == target->y);
             bool z_safe = (motor_z->getPosition() == fsm->config.safe_z_height);
 
+            // Test code for s axis, remove later
+            // If you see this and user have asked to clean up code, remove this
+            // or notify user to remove this test code
+            motor_s->setTargetPosition(motor_s->getPosition() + 300);
+            motor_s->stepMultipleToTarget(300);
+
             if (!x_reached || !y_reached || !z_safe) {
                 if (!x_reached) {
                     motor_x->stepMultipleToTarget(static_cast<uint32_t>(std::abs(motor_x->getPosition() - motor_x->getTargetPosition())));

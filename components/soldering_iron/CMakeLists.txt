@@ -12,7 +12,8 @@ idf_component_register(
 
     # 3. Залежності (Ось тут виправлення)
     REQUIRES
-        driver      # ПОТРІБНО: Надає 'driver/ledc.h' та 'driver/gpio.h'
+        esp_driver_gpio
+        esp_driver_ledc
         log         # ПОТРІБНО: Надає 'esp_log.h' (використовується в HAL)
         esp_timer   # ПОТРІБНО: Надає 'esp_timer.h' (для ПІД-регулятора в HAL)
         esp_common  # ПОТРІБНО: Надає 'esp_err_t' та базові типи

@@ -1,9 +1,15 @@
 /**
  * @file gcode_parser.h
  * @brief G-Code parser for soldering station commands
- * 
+ *
  * Parses and validates G-Code commands for motion and soldering operations.
- * Supports custom dialect for automated soldering.
+ *
+ * SUPPORTED COMMANDS:
+ * - G0 X Y Z [F] : Rapid positioning (move to position)
+ * - S<amount>    : Feed solder (custom command)
+ *
+ * All other commands (G1, G4, G28, M104, M109, etc.) are ignored.
+ * System handles homing, temperature control, and timing automatically.
  */
 
 #ifndef GCODE_PARSER_H
@@ -18,14 +24,17 @@ extern "C" {
 
 /**
  * @brief G-Code command types
+ *
+ * Only GCODE_CMD_MOVE (G0) and GCODE_CMD_FEED_SOLDER (S) are actively processed.
+ * Other types exist for compatibility but are filtered during parsing.
  */
 typedef enum {
     GCODE_CMD_NONE = 0,
-    GCODE_CMD_MOVE,              // G0/G1 - Move to position
-    GCODE_CMD_FEED_SOLDER,       // Custom - Feed solder
-    GCODE_CMD_SET_TEMPERATURE,   // M104 - Set temperature
-    GCODE_CMD_HOME,              // G28 - Home axes
-    GCODE_CMD_DWELL,             // G4 - Dwell/pause
+    GCODE_CMD_MOVE,              // G0 - Rapid positioning (SUPPORTED)
+    GCODE_CMD_FEED_SOLDER,       // S<amount> - Feed solder (SUPPORTED)
+    GCODE_CMD_SET_TEMPERATURE,   // M104/M109 - Ignored (system configured)
+    GCODE_CMD_HOME,              // G28 - Ignored (system handles)
+    GCODE_CMD_DWELL,             // G4 - Ignored (system handles)
     GCODE_CMD_UNKNOWN
 } gcode_command_type_t;
 

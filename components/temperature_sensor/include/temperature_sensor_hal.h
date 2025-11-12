@@ -24,10 +24,10 @@ extern "C"
     typedef struct
     {
         spi_host_device_t host_id; // SPI хост (напр. VSPI_HOST)
-        int pin_miso;              // Пін MISO
-        int pin_mosi;              // Пін MOSI (можна -1)
-        int pin_clk;               // Пін SCLK
-        int pin_cs;                // Пін Chip Select
+        gpio_num_t pin_miso;       // Пін MISO
+        gpio_num_t pin_mosi;       // Пін MOSI (можна -1)
+        gpio_num_t pin_clk;         // Пін SCLK
+        gpio_num_t pin_cs;          // Пін Chip Select
         int dma_chan;              // Канал DMA (0 = вимкнено)
         int clock_speed_hz;        // Швидкість SPI (напр. 2*1000*1000)
     } temperature_sensor_config_t;

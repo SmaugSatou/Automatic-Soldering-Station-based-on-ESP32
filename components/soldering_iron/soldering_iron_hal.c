@@ -17,7 +17,7 @@ static const char *TAG = "SOLDERING_IRON_HAL";
 // Почніть з Kp, потім додайте Ki, і в кінці Kd.
 #define DEFAULT_PID_KP 10.0 // Пропорційний (наскільки сильно реагувати на помилку)
 #define DEFAULT_PID_KI 0.1  // Інтегральний (як швидко виправляти малі помилки)
-#define DEFAULT_PID_KD 0.5  // Диференціальний (наскільки сильно гасити коливання)
+#define DEFAULT_PID_KD 0.0  // Диференціальний (наскільки сильно гасити коливання)
 
 // Межі для інтегральної частини (запобігає "Integral Windup")
 #define PID_INTEGRAL_MIN -50.0

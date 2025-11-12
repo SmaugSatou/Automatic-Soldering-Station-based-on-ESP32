@@ -148,12 +148,12 @@ static void init_heating_system() {
 
     // Initialize soldering iron PWM control
     soldering_iron_config_t iron_config = {
-        .heater_pwm_pin = GPIO_NUM_25,  // Default heater PWM pin (configurable via Kconfig)
+        .heater_pwm_pin = static_cast<gpio_num_t>(CONFIG_SOLDERING_IRON_PWM_PIN),
         .pwm_timer = LEDC_TIMER_0,
         .pwm_channel = LEDC_CHANNEL_0,
-        .pwm_frequency = 1000,  // 1 kHz PWM
+        .pwm_frequency = CONFIG_SOLDERING_IRON_PWM_FREQUENCY,
         .pwm_resolution = LEDC_TIMER_10_BIT,
-        .max_temperature = 450.0,
+        .max_temperature = static_cast<double>(CONFIG_SOLDERING_IRON_MAX_TEMP),
         .min_temperature = 20.0
     };
 
@@ -260,12 +260,22 @@ static bool on_execute_heating(void* user_data) {
     fsm_execution_context_t* ctx = fsm_controller_get_execution_context(fsm_handle);
     if (!ctx) return false;
 
-    // Read current temperature
-    double current_temp = get_current_temperature();
-    if (current_temp < 0) {
-        ESP_LOGE(TAG, "Temperature sensor error");
-        fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_ERROR);
-        return false;
+    // MAX6675 requires minimum 220ms between readings for new conversion
+    // Only read temperature every 250ms to ensure fresh data
+    static uint32_t last_temp_read_time = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000;
+
+    static double current_temp = 0.0;
+
+    if (current_time - last_temp_read_time >= 250) {
+        // Read current temperature
+        current_temp = get_current_temperature();
+        if (current_temp < 0) {
+            ESP_LOGE(TAG, "Temperature sensor error");
+            fsm_controller_post_event(fsm_handle, FSM_EVENT_HEATING_ERROR);
+            return false;
+        }
+        last_temp_read_time = current_time;
     }
 
     // Update PID controller with current temperature
@@ -399,11 +409,23 @@ static bool on_execute_normal_exit(void* user_data) {
     fsm_execution_context_t* ctx = fsm_controller_get_execution_context(fsm_handle);
     if (!ctx) return false;
 
-    // Read current temperature
-    double current_temp = get_current_temperature();
-    if (current_temp < 0) {
-        ESP_LOGW(TAG, "Cannot read temperature during cooldown");
-        current_temp = 200.0;  // Assume hot if sensor fails
+    // MAX6675 requires minimum 220ms between readings for new conversion
+    // Only read temperature every 250ms to ensure fresh data
+    static uint32_t last_temp_read_time = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000;
+
+    static double current_temp = 200.0;  // Default to hot temperature
+
+    if (current_time - last_temp_read_time >= 250) {
+        // Read current temperature
+        double temp = get_current_temperature();
+        if (temp < 0) {
+            ESP_LOGW(TAG, "Cannot read temperature during cooldown");
+            // Keep previous temperature value
+        } else {
+            current_temp = temp;
+        }
+        last_temp_read_time = current_time;
     }
 
     uint32_t time_cooldown = (esp_timer_get_time() / 1000) - ctx->start_time_ms;

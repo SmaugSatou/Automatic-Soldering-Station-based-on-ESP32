@@ -196,19 +196,26 @@ async function handleSendToController() {
     sendBtn.disabled = true;
 
     try {
-        // Send to server
+        // Strip comments and empty lines for ESP32
+        const cleanGCode = parsedGCode
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line && !line.startsWith(';'))  // Remove empty lines and comments
+            .join('\n');
+        
+        // Send clean G-Code to server
         const response = await fetch('/api/gcode/upload', {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain',
             },
-            body: parsedGCode
+            body: cleanGCode
         });
 
         if (response.ok) {
             const result = await response.json();
-            const lines = parsedGCode.split('\n').filter(l => l.trim() && !l.trim().startsWith(';'));
-            sendStatus.textContent = `Success: G-Code uploaded to controller (${lines.length} commands)`;
+            const commandCount = cleanGCode.split('\n').length;
+            sendStatus.textContent = `Success: G-Code uploaded to controller (${commandCount} commands)`;
             sendStatus.className = 'upload-status success';
             
             // Enable start button

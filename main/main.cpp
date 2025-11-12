@@ -34,15 +34,29 @@ StepperMotor* motor_s = nullptr;
 // FSM controller handle
 static fsm_controller_handle_t fsm_handle = nullptr;
 
-// Test pattern: 5 solder points (4 corners + center)
-static const solder_point_t solder_points[] = {
-    {1000, 1000, 0, true, 2000},    // Point 1: bottom-left corner
-    {3000, 1000, 0, true, 2000},    // Point 2: bottom-right corner
-    {3000, 4000, 0, true, 2000},    // Point 3: top-right corner
-    {1000, 4000, 0, true, 2000},    // Point 4: top-left corner
-    {2000, 2500, 0, true, 3000},    // Point 5: center
-};
-static const int NUM_SOLDER_POINTS = sizeof(solder_points) / sizeof(solder_points[0]);
+// Test pattern: 23 solder points (4 corners + center) - positions in mm, will be converted to steps
+static constexpr int NUM_SOLDER_POINTS = 23;
+static solder_point_t solder_points[NUM_SOLDER_POINTS];
+
+static void init_solder_points() {
+    // Define positions in mm
+    int32_t x_mm[NUM_SOLDER_POINTS] = {0, 
+        250, 0, 1, 2, 4, 8, 10, 20, 40, 80, 160,
+        160, 160, 160, 160, 160, 160, 160, 160, 160, 160, 160};      // X positions in mm
+    int32_t y_mm[NUM_SOLDER_POINTS] = {0, 
+        220, 220, 220, 220, 220, 220, 220, 220, 220, 220, 220,
+        220, 0, 1, 2, 4, 8, 10, 20, 40, 80, 160};     // Y positions in mm
+    int32_t z_mm[NUM_SOLDER_POINTS] = {0};             // Z positions in mm
+    
+    // Convert to steps using motor-specific conversion
+    for (int i = 0; i < NUM_SOLDER_POINTS; i++) {
+        solder_points[i].x = motor_x->mm_to_microsteps(x_mm[i]);
+        solder_points[i].y = motor_y->mm_to_microsteps(y_mm[i]);
+        solder_points[i].z = motor_z->mm_to_microsteps(z_mm[i]);
+        solder_points[i].solder = true;
+        solder_points[i].solder_time_ms = 2000;
+    }
+}
 
 // Execution sub-FSM instance (initialized in on_enter_executing)
 static execution_sub_fsm_t exec_sub_fsm;
@@ -181,8 +195,8 @@ static bool on_enter_executing(void* user_data) {
     motor_z->setEnable(true);
 
     execution_config_t exec_config = {
-        .safe_z_height = 16000,
-        .soldering_z_height = 18000,
+        .safe_z_height = motor_z->mm_to_microsteps(160),       // 160mm in steps
+        .soldering_z_height = motor_z->mm_to_microsteps(180),  // 180mm in steps
         .home_x = 0,
         .home_y = 0,
         .home_z = 0
@@ -242,6 +256,8 @@ static bool on_execute_normal_exit(void* user_data) {
 }
 
 static void init_fsm(void) {
+    init_solder_points();
+    
     fsm_config_t config = {
         .tick_rate_ms = 100,
         .enable_logging = true,

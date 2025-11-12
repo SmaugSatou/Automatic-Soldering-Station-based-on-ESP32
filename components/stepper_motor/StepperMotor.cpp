@@ -202,12 +202,6 @@ void StepperMotor::resetPosition() {
     ESP_LOGI(TAG, "Position reset to 0");
 }
 
-int32_t StepperMotor::mm_to_microsteps(int64_t mm) {
-    return (int32_t)(mm * steps_per_mm);
-}
-
-int32_t microsteps_to_mm(int32_t microsteps);
-
 bool StepperMotor::isEndpointReached() const {
     if (handle_ == nullptr) {
         ESP_LOGW(TAG, "Motor not initialized");
@@ -248,6 +242,6 @@ int32_t StepperMotor::microsteps_to_mm(int32_t microsteps) {
     return (int32_t)(microsteps / steps_per_mm);
 }
 
-int32_t StepperMotor::mm_to_microsteps(int64_t mm) {
+int32_t StepperMotor::mm_to_microsteps(int32_t mm) {
     return (int32_t)(mm * steps_per_mm);
 }

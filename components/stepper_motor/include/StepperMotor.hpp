@@ -110,7 +110,7 @@ public:
     /**
      * @brief Convert millimeters to microsteps for current motor configuration
      */
-    int32_t mm_to_microsteps(int64_t mm);
+    int32_t mm_to_microsteps(int32_t mm);
 
     /**
      * @brief Convert microsteps to millimeters for current motor configuration

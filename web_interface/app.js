@@ -210,11 +210,6 @@ async function handleSendToController() {
                 startBtn.disabled = false;
             }
 
-            // Reset after successful upload
-            setTimeout(() => {
-                resetUploadForm();
-            }, 3000);
-
         } else {
             const error = await response.json();
             sendStatus.textContent = `Error: ${error.message || 'Upload failed'}`;
@@ -248,11 +243,14 @@ async function handleStart() {
             controlStatus.textContent = 'Execution started';
             controlStatus.className = 'upload-status success';
 
+            resetUploadForm();
+            
             // Update button states
             startBtn.disabled = true;
             pauseBtn.disabled = false;
             resumeBtn.disabled = true;
             stopBtn.disabled = false;
+
         } else {
             const error = await response.json();
             controlStatus.textContent = `Error: ${error.message || 'Failed to start'}`;
